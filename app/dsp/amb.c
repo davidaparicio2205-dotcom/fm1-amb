@@ -42,14 +42,14 @@ static const struct {
     const char *name;
     int8_t v[P_NPARAMS];
 } PIECES[EN_NPIECES] = {
-    {"Monochrome",    {60, 35, 40, 0, 25, 20, 70, 0, 55, 4, 80, 90, 30, 75, 35, 35, 0, 1, 60, 9, 5, 0, 0, 0, 30, 20, 0, 30}},
-    {"Midnight Hours", {50, 45, 45, 25, 35, 40, 55, 25, 65, 3, 75, 85, 35, 65, 40, 50, 0, 1, 76, 9, 1, 0, 0, 0, 25, 30, 0, 40}},
+    {"Monochrome",    {62, 38, 40, 20, 25, 20, 70, 20, 62, 4, 82, 88, 32, 80, 35, 45, 0, 1, 60, 9, 5, 0, 0, 0, 30, 20, 0, 25}},
+    {"Midnight Hours", {52, 40, 45, 42, 35, 30, 55, 40, 60, 3, 70, 80, 40, 65, 45, 45, 0, 1, 88, 9, 1, 0, 0, 0, 25, 30, 0, 45}},
     {"Pale Piano",    {55, 20, 30, 0, 20, 25, 60, 0, 50, 3, 90, 95, 55, 80, 30, 60, 0, 1, 66, 5, 3, 0, 0, 0, 20, 35, 0, 30}},
-    {"Neon Fog",      {70, 40, 40, 30, 35, 40, 45, 30, 65, 2, 90, 100, 70, 70, 55, 75, 0, 1, 84, 0, 0, 0, 1, 0, 20, 30, 10, 40}},
-    {"Vocoder Drift", {75, 30, 25, 0, 30, 45, 50, 0, 40, 3, 70, 80, 65, 60, 45, 70, 0, 1, 72, 7, 4, 0, 1, 0, 30, 25, 0, 30}},
-    {"Glitch Garden", {45, 70, 40, 50, 65, 70, 30, 55, 55, 1, 50, 60, 65, 40, 80, 85, 0, 1, 108, 2, 1, 1, 0, 0, 15, 40, 25, 65}},
-    {"Fragments",     {30, 60, 50, 15, 50, 80, 25, 20, 70, 5, 55, 70, 45, 30, 70, 90, 0, 1, 88, 6, 2, 1, 1, -1, 60, 15, 0, 20}},
-    {"Static Folk",   {35, 50, 55, 45, 60, 90, 20, 60, 50, 2, 45, 55, 55, 35, 60, 95, 0, 1, 92, 4, 7, 0, 0, -1, 40, 50, 20, 75}},
+    {"Neon Fog",      {60, 34, 36, 34, 35, 35, 45, 40, 50, 2, 74, 82, 46, 70, 45, 65, 0, 1, 84, 0, 0, 0, 1, 0, 20, 30, 10, 40}},
+    {"Vocoder Drift", {64, 30, 28, 25, 30, 45, 50, 30, 42, 3, 62, 72, 50, 60, 45, 85, 0, 1, 72, 7, 4, 0, 1, 0, 30, 25, 0, 30}},
+    {"Glitch Garden", {45, 66, 42, 42, 60, 55, 30, 60, 45, 1, 48, 58, 58, 40, 75, 80, 0, 1, 108, 2, 1, 1, 0, 0, 15, 40, 35, 65}},
+    {"Fragments",     {34, 62, 48, 30, 50, 75, 25, 35, 58, 5, 55, 70, 48, 30, 85, 90, 0, 1, 100, 6, 2, 1, 1, -1, 55, 15, 55, 72}},
+    {"Static Folk",   {40, 48, 55, 44, 60, 85, 20, 55, 48, 2, 46, 58, 52, 40, 70, 95, 0, 1, 104, 4, 7, 0, 1, -1, 40, 50, 50, 78}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -808,7 +808,7 @@ static void drums_evolve(void)                  /* a bar: a pattern turns, or ga
     int d = irand(EN_NDRUM), n = EN_DRUM_N[d];
     if (!drum_kb[d])
         return;
-    if (frand() < 0.5f) {
+    if (d != 0 && frand() < 0.5f) {              /* the kick is never rotated: it holds the downbeat */
         drum_rot[d] = (drum_rot[d] + (frand() < 0.5f ? 1 : n - 1)) % n;
     } else {
         int k = drum_k[d] + (frand() < 0.5f ? 1 : -1);
@@ -828,9 +828,9 @@ static void drum_fire(int d, float vel)
     case 0: {                                   /* thump: the chord's root, low, falling into place */
         float f = mtof((float)(36 + chord_pcs[0]));
         v->note = DRUM_GM[0];
-        v->inc = f * 2.2f * (1.0f / EN_SR);
+        v->inc = f * 4.0f * (1.0f / EN_SR);       /* a deeper fall in pitch: more punch */
         v->inc_end = f * (1.0f / EN_SR);
-        v->adec = fm_expf(-6.9f / (0.45f * EN_SR));
+        v->adec = fm_expf(-6.9f / (0.30f * EN_SR));   /* shorter: a marked kick, not a boom */
         break;
     }
     case 1:                                     /* closed hat: short; it chokes the open one */
@@ -1667,7 +1667,7 @@ static void render_drums(uint32_t n)
     if (v->on) {
         float ph = v->ph, inc = v->inc, amp = v->amp, att = v->att;
         for (j = 0; j < n; j++) {
-            float x = sine(ph) * amp * att * g;
+            float x = sine(ph) * amp * att * g * 1.5f;   /* the kick forward in the mix */
             mixl[j] += x;
             mixr[j] += x;
             rsend[j] += x * 0.1f;
