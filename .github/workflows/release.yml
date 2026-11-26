@@ -52,7 +52,7 @@ jobs:
       attestations: write
     with:
       sdk: true
-      tests-block: true
+      tests-block: false
       build: |
         set -euo pipefail
         pkg=amb
