@@ -20,7 +20,7 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {
     B(0, 2, 4, 5, 7, 9, 10), B(0, 2, 3, 5, 7, 8, 10), B(0, 2, 4, 7, 9, 9, 9),  B(0, 3, 5, 7, 10, 10, 10)};
 #undef B
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
-const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 12, 7};
+const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 16, 16};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Pad", 0, 100, 60},      {"Bells", 0, 100, 65},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
@@ -42,14 +42,14 @@ static const struct {
     const char *name;
     int8_t v[P_NPARAMS];
 } PIECES[EN_NPIECES] = {
-    {"Monochrome",    {62, 38, 40, 20, 25, 20, 70, 20, 62, 4, 82, 88, 32, 80, 35, 45, 0, 1, 60, 9, 5, 0, 0, 0, 30, 20, 0, 25}},
-    {"Midnight Hours", {52, 40, 45, 42, 35, 30, 55, 40, 60, 3, 70, 80, 40, 65, 45, 45, 0, 1, 88, 9, 1, 0, 0, 0, 25, 30, 0, 45}},
+    {"Monochrome",    {62, 38, 40, 22, 25, 20, 70, 14, 62, 4, 82, 88, 32, 80, 35, 45, 0, 1, 60, 9, 5, 0, 0, 0, 30, 15, 0, 25}},
+    {"Midnight Hours", {52, 40, 52, 40, 35, 30, 55, 29, 60, 3, 70, 80, 40, 65, 45, 45, 0, 1, 88, 9, 1, 0, 0, 0, 25, 10, 0, 45}},
     {"Pale Piano",    {55, 20, 30, 0, 20, 25, 60, 0, 50, 3, 90, 95, 55, 80, 30, 60, 0, 1, 66, 5, 3, 0, 0, 0, 20, 35, 0, 30}},
-    {"Neon Fog",      {60, 34, 36, 34, 35, 35, 45, 40, 50, 2, 74, 82, 46, 70, 45, 65, 0, 1, 84, 0, 0, 0, 1, 0, 20, 30, 10, 40}},
-    {"Vocoder Drift", {64, 30, 28, 25, 30, 45, 50, 30, 42, 3, 62, 72, 50, 60, 45, 85, 0, 1, 72, 7, 4, 0, 1, 0, 30, 25, 0, 30}},
-    {"Glitch Garden", {45, 66, 42, 42, 60, 55, 30, 60, 45, 1, 48, 58, 58, 40, 75, 80, 0, 1, 108, 2, 1, 1, 0, 0, 15, 40, 35, 65}},
-    {"Fragments",     {34, 62, 48, 30, 50, 75, 25, 35, 58, 5, 55, 70, 48, 30, 85, 90, 0, 1, 100, 6, 2, 1, 1, -1, 55, 15, 55, 72}},
-    {"Static Folk",   {40, 48, 55, 44, 60, 85, 20, 55, 48, 2, 46, 58, 52, 40, 70, 95, 0, 1, 104, 4, 7, 0, 1, -1, 40, 50, 50, 78}},
+    {"Neon Fog",      {60, 34, 48, 36, 35, 35, 45, 43, 50, 2, 74, 82, 46, 70, 45, 65, 0, 1, 84, 0, 0, 0, 1, 0, 20, 10, 0, 40}},
+    {"Vocoder Drift", {64, 30, 40, 24, 30, 45, 50, 29, 42, 3, 62, 72, 50, 60, 45, 85, 0, 1, 72, 7, 4, 0, 1, 0, 30, 10, 0, 30}},
+    {"Glitch Garden", {45, 66, 44, 40, 60, 55, 30, 71, 45, 1, 48, 58, 58, 40, 75, 80, 0, 1, 112, 2, 1, 1, 0, 0, 15, 10, 30, 55}},
+    {"Fragments",     {34, 62, 48, 30, 50, 75, 25, 100, 58, 5, 55, 70, 48, 30, 85, 90, 0, 1, 100, 6, 2, 1, 1, -1, 55, 10, 0, 60}},
+    {"Static Folk",   {40, 48, 52, 40, 60, 85, 20, 86, 48, 2, 46, 58, 52, 40, 70, 95, 0, 1, 112, 4, 7, 0, 1, -1, 40, 10, 55, 66}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -523,8 +523,8 @@ static inline float blep_saw(float t, float dt)
 
 /* ------------------------------------------------------------------ bass --- */
 static struct {
-    float ph, inc, note, target, amp;
-    uint8_t midi_note, rest;                    /* rest: sitting this chord out */
+    float ph, inc, note, target, amp, env;
+    uint8_t midi_note, rest, up;                /* rest: sitting this chord out; up: this pluck is an octave higher */
 } bass;
 static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / the glide's time in samples */
 
@@ -547,7 +547,7 @@ static const float RATIO[5] = {1.0f, 2.0f, 3.0f, 3.5f, 4.77f};
 typedef struct {
     float ph, inc, inc_end, amp, adec, idx, x1, x2, att, mph[4], pend;
     int32_t wait;                               /* swing: samples until a hit that waits (pend: its velocity) */
-    uint8_t on, note;
+    uint8_t on, note, snare, pkind;             /* snare: the second voice rings as a snare, not an open hat */
 } drum_t;
 static drum_t drum[EN_NDRUM];
 static uint8_t drum_pos[EN_NDRUM];
@@ -555,7 +555,6 @@ static uint32_t drum_pat[EN_NDRUM];
 static float pulse_vol, swing, hat_f = 0.9f, hat_open = 0.42f;
 static float step_len, pulse_left;               /* a sixteenth, in samples; to the next MIDI clock pulse */
 static uint32_t noise = 22222u;
-static const uint8_t DRUM_KMAX[EN_NDRUM] = {5, 7, 3};
 static const uint8_t DRUM_GM[EN_NDRUM] = {36, 42, 46};          /* kick, closed hat, open hat */
 /* the hats' metal: four square waves at the 808's inharmonic ratios (Hz / EN_SR) */
 static const float HAT_INC[4] = {304.4f / EN_SR, 369.6f / EN_SR, 522.7f / EN_SR, 800.0f / EN_SR};
@@ -784,38 +783,43 @@ static void bell_ring(int l, int slot)
 }
 
 /* ---------------------------------------------------------------- pulse --- */
-static const uint8_t DRUM_ROT[EN_NDRUM] = {0, 2, 3};
-static int drum_k[EN_NDRUM], drum_kb[EN_NDRUM], drum_rot[EN_NDRUM], pulse_rest;   /* rest: bars left */
+/* the grooves: fixed, never random. HITS picks one of eight (0 = none). Each is a bar of 16 sixteenths,
+ * and a bit is a hit on that step. kick, closed hat, snare (the second voice, on the backbeat) and open hat;
+ * bass: the steps the bass plucks on (none: the drone); up: where the pluck jumps an octave; bdec: how long
+ * a pluck rings, in seconds. */
+typedef struct { uint16_t kick, hat, snr, open, bass, up; float bdec; } groove_t;
+static const groove_t GROOVE[8] = {
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0.00f},   /* 0 none */
+    {0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0.00f},   /* 1 heartbeat: one kick a bar */
+    {0x0101, 0x4444, 0x0000, 0x0000, 0x0101, 0x0000, 0.50f},   /* 2 half-time: kick on 1 and 3, soft offbeat hats */
+    {0x0501, 0x5555, 0x1010, 0x0000, 0x4141, 0x4040, 0.24f},   /* 3 pop '80s: kick 1, 3 and the and of 3; snare 2 and 4 */
+    {0x1111, 0xAAAA, 0x0000, 0x4444, 0x4444, 0x0000, 0.20f},   /* 4 four on the floor, bass on the offbeat */
+    {0x0441, 0xFFFF, 0x1010, 0x0000, 0x4449, 0x4008, 0.18f},   /* 5 UK dance: a broken kick, busy hats */
+    {0x0481, 0xAAAA, 0x1010, 0x8000, 0x0489, 0x0000, 0.16f},   /* 6 garage two-step: shuffled with Swing */
+    {0x0909, 0x24A4, 0x0000, 0x0000, 0x0909, 0x0000, 0.15f},   /* 7 fragments: fixed, but broken */
+};
+static uint16_t groove_snr, groove_bass, groove_up;
+static float groove_bdec = 0.999f;
 
-static void drum_publish(int d)
+static void drums_pattern(void)                 /* HITS: which groove */
 {
-    drum_pat[d] = en_euclid(drum_k[d], EN_DRUM_N[d], drum_rot[d]);
-    en_drum_pat[d] = drum_pat[d];
+    int d, gi = (par[P_HITS] * 7 + 50) / 100;
+    const groove_t *g = &GROOVE[gi < 0 ? 0 : (gi > 7 ? 7 : gi)];
+    drum_pat[0] = g->kick;
+    drum_pat[1] = g->hat;
+    drum_pat[2] = (uint32_t)g->snr | g->open;
+    groove_snr = g->snr;
+    groove_bass = g->bass;
+    groove_up = g->up;
+    groove_bdec = fm_expf(-5.0f / (fm_maxf(g->bdec, 0.05f) * EN_SR));
+    for (d = 0; d < EN_NDRUM; d++)
+        en_drum_pat[d] = drum_pat[d];
 }
 
-static void drums_pattern(void)                 /* Hits: the patterns' home */
+static void bass_pluck(int step)                /* the bass strikes: its harmonics die faster than its body */
 {
-    int d;
-    for (d = 0; d < EN_NDRUM; d++) {
-        drum_kb[d] = drum_k[d] = (par[P_HITS] * DRUM_KMAX[d] + 50) / 100;
-        drum_rot[d] = DRUM_ROT[d];
-        drum_publish(d);
-    }
-}
-
-static void drums_evolve(void)                  /* a bar: a pattern turns, or gains or loses a hit */
-{
-    int d = irand(EN_NDRUM), n = EN_DRUM_N[d];
-    if (!drum_kb[d])
-        return;
-    if (d != 0 && frand() < 0.5f) {              /* the kick is never rotated: it holds the downbeat */
-        drum_rot[d] = (drum_rot[d] + (frand() < 0.5f ? 1 : n - 1)) % n;
-    } else {
-        int k = drum_k[d] + (frand() < 0.5f ? 1 : -1);
-        if (k >= drum_kb[d] - 1 && k <= drum_kb[d] + 1 && k >= 1 && k <= n)
-            drum_k[d] = k;
-    }
-    drum_publish(d);
+    bass.env = 1.0f;
+    bass.up = (uint8_t)(groove_up >> step & 1u);
 }
 
 static void drum_fire(int d, float vel)
@@ -836,11 +840,20 @@ static void drum_fire(int d, float vel)
     case 1:                                     /* closed hat: short; it chokes the open one */
         v->note = DRUM_GM[1];
         v->adec = fm_expf(-6.9f / (0.06f * EN_SR));
-        drum[2].adec = fm_expf(-6.9f / (0.02f * EN_SR));
+        if (!drum[2].snare)
+            drum[2].adec = fm_expf(-6.9f / (0.02f * EN_SR));
         break;
-    default:                                    /* open hat: a long, soft "tss" */
-        v->note = DRUM_GM[2];
-        v->adec = fm_expf(-6.9f / (hat_open * EN_SR));
+    default:
+        if (v->pkind) {                         /* snare: a short body and a burst of noise, with room around it */
+            v->note = 38;
+            v->snare = 1;
+            v->ph = 0.0f;
+            v->adec = fm_expf(-6.9f / (0.20f * EN_SR));
+        } else {                                /* open hat: a long, soft "tss" */
+            v->note = DRUM_GM[2];
+            v->snare = 0;
+            v->adec = fm_expf(-6.9f / (hat_open * EN_SR));
+        }
         break;
     }
     en_drum_glow[d] = 1.0f;
@@ -848,9 +861,10 @@ static void drum_fire(int d, float vel)
     midi(0x89, v->note, 0);
 }
 
-static void drum_hit(int d, float vel, int off)  /* off: an off sixteenth, which Swing delays */
+static void drum_hit(int d, float vel, int off, int kind)  /* off: an off sixteenth, which Swing delays */
 {
     int32_t w = off ? (int32_t)(swing * step_len) : 0;
+    drum[d].pkind = (uint8_t)kind;
     if (w > 0) {
         drum[d].wait = w;
         drum[d].pend = vel;
@@ -884,23 +898,28 @@ static uint32_t sixteenth;
 static void tick(void)
 {
     int d, l;
-    const float pa = fm_clampf(1.0f + 1.3f * arcm, 0.3f, 1.15f);   /* the arc: the pulse fades (never out) */
-    if ((sixteenth & 15u) == 0u) {              /* a bar: Evolve's rests and turns */
-        if (pulse_rest > 0)
-            pulse_rest--;
-        else if (frand() < evolve * 0.015f)
-            pulse_rest = 2 + irand(3);           /* a short breath: 2 to 4 bars */
-        en_pulse_rest = (uint8_t)(pulse_rest > 0);
-        if (frand() < evolve * 0.25f)
-            drums_evolve();
-    }
+    const float pa = fm_clampf(1.0f + 0.5f * arcm, 0.75f, 1.1f);   /* the arc: only a slow, slight lift */
+    const int step = drum_pos[0];
     for (d = 0; d < EN_NDRUM; d++) {
-        if (drum_pat[d] >> drum_pos[d] & 1u && !pulse_rest)
-            drum_hit(d, ((drum_pos[d] == 0 ? 0.95f : 0.6f) + 0.25f * frand()) * pa, (int)(sixteenth & 1u));
+        if (drum_pat[d] >> drum_pos[d] & 1u) {  /* the same hits, the same strength, every bar */
+            float vel;
+            int kind = 0;
+            if (d == 0) {
+                vel = drum_pos[0] == 0 ? 1.0f : 0.8f;
+            } else if (d == 1) {
+                vel = (drum_pos[1] & 3) == 2 ? 0.75f : ((drum_pos[1] & 1) ? 0.4f : 0.55f);
+            } else {
+                kind = (int)(groove_snr >> drum_pos[2] & 1u);
+                vel = kind ? 0.9f : 0.6f;
+            }
+            drum_hit(d, vel * pa, (int)(sixteenth & 1u), kind);
+        }
         en_drum_pos[d] = drum_pos[d];
         if (++drum_pos[d] >= EN_DRUM_N[d])
             drum_pos[d] = 0;
     }
+    if (groove_bass >> step & 1u)
+        bass_pluck(step);
     if ((sixteenth & 3u) == 0u) {               /* the loops step in quarter notes */
         for (l = 0; l < EN_NLOOP; l++) {
             int s = loop_pos[l];
@@ -1253,7 +1272,6 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     pad_handoff();
     bass_to(chord_pcs[0]);
     bass.rest = 0;
-    pulse_rest = 0;
     en_pulse_rest = 0;
     drums_pattern();
     drift_reset();
@@ -1547,9 +1565,11 @@ static void render_pad(uint32_t n)
 static void render_bass(uint32_t n)
 {
     uint32_t j;
-    const float g = bass_vol * 0.42f, tgt = en_playing && !bass.rest ? 1.0f : 0.0f,
+    const int plucked = groove_bass != 0u;      /* a groove with a bass line: plucks over a quiet drone */
+    const float g = bass_vol * 0.42f, tgt = en_playing && (plucked || !bass.rest) ? 1.0f : 0.0f,
                 rate = tgt > 0.0f ? 1.0f / (2.5f * EN_SR) : 1.0f / (4.0f * EN_SR);
-    float ph = bass.ph, amp = bass.amp, inc;
+    const float oct = bass.up ? 2.0f : 1.0f;
+    float ph = bass.ph, amp = bass.amp, env = bass.env, inc;
     if (amp < 1e-5f && !en_playing) {
         bass.amp = 0.0f;
         en_bass_level = 0.0f;
@@ -1559,6 +1579,13 @@ static void render_bass(uint32_t n)
     inc = mtof(bass.note) * (1.0f / EN_SR);
     for (j = 0; j < n; j++) {
         float x = sine(ph) * 0.75f + sine(ph * 0.5f + 0.25f) * 0.45f + sine(ph * 2.0f) * 0.12f;
+        if (plucked) {
+            float b = env * env;                 /* the upper harmonics fall away faster: a filter closing */
+            float p = sine(ph * oct) * 0.8f + sine(ph * oct * 0.5f + 0.25f) * 0.5f +
+                      b * (sine(ph * oct * 2.0f) * 0.5f + sine(ph * oct * 3.0f) * 0.32f + sine(ph * oct * 4.0f) * 0.18f);
+            x = x * 0.3f + p * env * 1.9f;
+            env *= groove_bdec;
+        }
         ph += inc;
         if (ph >= 2.0f)                          /* two turns: the sub-octave's period */
             ph -= 2.0f;
@@ -1570,6 +1597,7 @@ static void render_bass(uint32_t n)
     }
     bass.ph = ph;
     bass.amp = amp;
+    bass.env = fm_flush(env);
     en_bass_level = amp;
 }
 
@@ -1658,6 +1686,39 @@ static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
     v->on = amp > 0.0005f;
 }
 
+static void render_snare(drum_t *v, uint32_t n, float g, float pl, float pr)
+{
+    uint32_t j;
+    float x1, x2, amp, att, ph;
+    if (!v->on)
+        return;
+    x1 = v->x1, x2 = v->x2, amp = v->amp, att = v->att, ph = v->ph;
+    for (j = 0; j < n; j++) {
+        float in, hp, x;
+        noise = noise * 1664525u + 1013904223u;
+        in = (float)(int32_t)noise * (1.0f / 2147483648.0f);
+        hp = in - x2 - 0.9f * x1;                /* noise through a wide, middle band */
+        x1 += 0.35f * hp;
+        x2 += 0.35f * x1;
+        x = (1.6f * x1 + 0.5f * sine(ph) * amp) * amp * att * g;   /* the tone dies faster than the noise */
+        ph += 190.0f * (1.0f / EN_SR);
+        if (ph >= 1.0f)
+            ph -= 1.0f;
+        mixl[j] += x * pl;
+        mixr[j] += x * pr;
+        rsend[j] += x * 0.3f;                    /* room around it */
+        esend[j] += x * 0.04f;
+        amp *= v->adec;
+        att += (1.0f - att) * 0.5f;
+    }
+    v->x1 = fm_flush(x1);
+    v->x2 = fm_flush(x2);
+    v->ph = ph;
+    v->amp = amp;
+    v->att = att;
+    v->on = amp > 0.0005f;
+}
+
 static void render_drums(uint32_t n)
 {
     uint32_t j;
@@ -1685,7 +1746,10 @@ static void render_drums(uint32_t n)
         v->on = amp > 0.0005f;
     }
     render_hat(&drum[1], n, g * 0.2f, 0.6f, 1.0f);    /* closed: a little right */
-    render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
+    if (drum[2].snare)
+        render_snare(&drum[2], n, g * 0.9f, 0.8f, 0.8f);   /* snare: in the middle */
+    else
+        render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
 }
 
 static void render_chunk(int32_t *out, uint32_t n, float gain)
