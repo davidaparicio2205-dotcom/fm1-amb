@@ -41,9 +41,14 @@ glow and float glows). **Motion** was rescored 3 for Long Glow and Clean Signal 
 | Clean Signal | 4 | 4 | 4 | 5 | 5 | 5 | 4.50 |
 | Cut & Paste | 5 | 4 | 5 | 5 | 4 | 5 | 4.67 |
 
-Every score is ≥ 4, and the average of the set is 4.63. The frame rate after this pass is in the PR's emulator
-table. Where a scene is below 30 fps at 120 MHz, Motion stays 4 only because the device's clock is twice the test
-clock: that is stated there, not assumed here.
+Every score is ≥ 4, and the average of the set is 4.63.
+
+Frame rate measured after this pass in the emulator at 120 MHz (half the FM-1's clock), 5 minutes a piece, the
+Setup page's own count (`emulator/pieces-setup-end.png`): After Dark 22 and 25 fps, Long Glow 20 and 20, Clean
+Signal 27 and 25, Cut & Paste 26 and 25. That is **below the 30 fps target at the test clock**. The UI gets what
+the audio interrupt leaves (49–71 % taken at 120 MHz). On the FM-1 at 240 MHz the audio takes half as much, but
+that frame rate is not measured here. Motion keeps 4 on that basis. If the device shows less than 30 fps, the next
+step is to draw the Long Glow's glows every other frame.
 
 Open points (not blocking): the Clean Signal's machine half could also appear at a lower arc. The Cut & Paste
 scale strip could be larger.

@@ -61,11 +61,11 @@ flowchart LR
 | UI frames | main loop calls `app_frame` at most every 16 ms (~60/s). The main band is redrawn every 2nd frame (**30/s**). Header and knobs only when they change | `main_fm1.c`, `ui.c` |
 | CPU | JieLi AC79 (pi32v2), 240 MHz on the FM-1. The emulator's `mhz=120` is the project's test clock (2× margin) | prompt, fm1-emu |
 | Audio | 44.1 kHz stereo, 24-bit in int32, a block of 256 frames (5.8 ms) per interrupt | `app.h` |
-| Audio budget | `plat_cpu_pct()`: the render's time as a % of its block, smoothed over 16 blocks (Setup's header shows it) | `main_fm1.c` |
+| Audio budget | `plat_cpu_pct()`: the render's time as a % of its block, smoothed over 16 blocks (Setup's header shows it). Measured at 120 MHz in fm1-emu, 5 min a piece: averages 49–71 %, worst 67–82 %, 0 xruns | `main_fm1.c`, the PR |
 | Voices | pad 4, bells 8 (6 before; stutter), drums 3 (kick, closed hat, snare/open hat), bass 1 (sine + sub + 2 harmonics) | `amb.c` |
-| Image | ~122 KB at the start of this work (see the CI build log for the current size) | CI build log |
-| RAM | `.data+.bss` 44.9 KB of 96 KB before; +~21 KB (chorus 4 KB, room 17 KB) | CI build log |
-| Pool | 332.2 KB of 336 KB (plate ~108 KB, tape 124 KB, canvas 69 KB); the build insists on 8 KB spare, so new buffers go in `.bss` | CI build log, `build.py` |
+| Image | 121 976 B before, **147 648 B** now (the app slot's limit is checked by the build) | CI build log |
+| RAM | `.data+.bss` 44 868 B before, **68 428 B of 98 304** now (chorus 4 KB, room 17 KB, bells, UI state) | CI build log |
+| Pool | 332 208 B of 344 064, unchanged (plate ~108 KB, tape 124 KB, canvas 69 KB). The build insists on 8 KB spare, so the new buffers went in `.bss` | CI build log, `build.py` |
 | Command queue | 64 commands a block: a piece change posts 36 | `amb.c` |
 
 ## The emulator (fm1-emu)

@@ -93,8 +93,10 @@ the instrument itself, drawn in that era's way. Code: `app/era_palette.h` (palet
 - The main band is drawn every second frame: 30 fps when the main loop runs at its 60 passes a second.
   `expect fps >27` in `tests/scenarios/first.amb` checks it in the simulator.
 - Setup's header shows the frame rate. Setup's main band shows the audio load now and at its worst, the xruns and
-  the frame rate (`draw_diag`), so the emulator and the device report their own numbers. Measured results are in
-  the PR and in `visuals/emulator/`.
+  the frame rate (`draw_diag`), so the emulator and the device report their own numbers.
+- Measured in fm1-emu at 120 MHz (half the FM-1's clock), 5 minutes a piece: **20–27 fps** (`visuals/emulator/`).
+  The simulator, which has no CPU limit, draws 30. Before the performance pass (integer glows, row grounds,
+  scanlines in the ground), the emulator measured 8–25 fps.
 - No tearing: the panel has no TE line. Each band goes out in one DMA transfer (12.6 ms for the main band at
   ~44 MHz SPI), and the next frame's drawing waits for it (`cv_begin` → `lcd_sync`).
 

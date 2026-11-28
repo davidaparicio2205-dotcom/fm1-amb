@@ -212,7 +212,7 @@ Tune, MIDI out and Lights are shared by all the pieces. Why each piece sounds as
 | Clean Signal | **Glass Choir** | G Mixolydian, 72: the Formant choir, half-time, bells that stutter now and then. |
 | | **Glitch Garden** | D Dorian, 112: Strings, a UK-dance pulse, glitching bells. |
 | Cut & Paste | **Fragments** | F# Phrygian, 100: a broken pattern, restless phrases (Evolve 75), glitches, a long echo. |
-| | **Static Folk** | E pentatonic minor, 112: two-step with swing and a gated snare, the Formant choir. |
+| | **Static Folk** | E pentatonic minor, 112: two-step with swing, the Formant choir, stuttering bells. |
 
 ---
 

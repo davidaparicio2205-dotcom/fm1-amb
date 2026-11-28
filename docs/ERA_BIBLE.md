@@ -136,8 +136,9 @@ no title)
 **Engine mapping**
 - Fragments: the broken pattern, the Voices pad, **Glitch 55**, Evolve 75 (phrases change often), Echo 4 bars,
   bells an octave down. Root F#, Phrygian. Tempo 100.
-- Static Folk: the **two-step** pattern with **Swing 55** and the gated room (Room 30), the Formant pad, Glitch
-  30 (45 at first: its stutters overlapping pushed the emulator's worst audio block to 87 % at 120 MHz). Root E, minor pentatonic. Tempo 112.
+- Static Folk: the **two-step** pattern with **Swing 55**, the Formant pad, Glitch 45, no gated room (that is an
+  '80s device, era 1's; with it, the emulator's worst audio block was 87 % at 120 MHz, without it 81 %). Root E,
+  minor pentatonic. Tempo 112.
 
 **Visual target**
 - Collage: card tiles on warm paper, cold against warm. Cuts on the groove's own hits, freezes between them.
@@ -170,7 +171,7 @@ only the values that set each era's character:
 | Glass Choir | Formant | Half | 30 | 0 | 25 | 0 | 72 | G Mixolydian | +4 |
 | Glitch Garden | Strings | UK | 20 | 0 | 70 | 0 | 112 | D Dorian | +6 |
 | Fragments | Voices | Broken | 0 | 0 | 55 | 0 | 100 | F# Phrygian | +6 |
-| Static Folk | Formant | 2-step | 25 | 0 | 30 | 30 | 112 | E pent. minor | +8 |
+| Static Folk | Formant | 2-step | 25 | 0 | 45 | 0 | 112 | E pent. minor | +8 |
 
 ## Self-audit (gate 8)
 
