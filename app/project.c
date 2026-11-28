@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
- * Copyright (C) 2026 Charles Vestal */
+ * Copyright (C) 2026 Charles Vestal
+ * Copyright (C) 2026 David (davidaparicio2205-dotcom): format 5, the older formats reset to the new recipes */
 /* AMB-1 project: one flash object (OBJ_PROJ). A project of another format, or none, gives the
  * defaults. Part of the unity build, after app.h.
  *
@@ -76,9 +77,12 @@ static int project_valid(void)                  /* an older format: the recipes 
     return 1;
 }
 
-/* format 3 (0.9 before the layer pages): 23 settings a piece. Carried over: each piece's own, the
- * new ones from its recipe */
-#define V3_NPARAMS (P_PADTONE + 1)
+/* the older formats: 3 (AMB-1 0.9 before the layer pages, 23 settings a piece) and 4 (AMB-1 1.x and this fork
+ * before the eras, 28). Their pieces were other pieces: the eras' recipes take their place, and only what belongs to
+ * the player is carried over: Tune, MIDI out, the lights and the piece that was playing. (A tweak saved on an old
+ * piece would otherwise mask the new recipe of the piece now in its slot.) */
+#define V3_NPARAMS 23
+#define V4_NPARAMS 28
 typedef struct {
     int16_t par[V3_NPARAMS];
     uint16_t pool;
@@ -91,25 +95,32 @@ typedef struct {
     slot_v3_t slot[NPIECES];
     uint8_t rsv[16];
 } project_v3_t;
+typedef struct {
+    int16_t par[V4_NPARAMS];
+    uint16_t pool;
+} slot_v4_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V4_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v4_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v4_t;
 
-static void from_v3(const project_v3_t *o)
+static int16_t clampi(int v, int p)
 {
-    slot_t r;
-    int i, p;
-    proj.magic = PROJ_MAGIC;
-    proj.format = PROJ_FORMAT;
-    proj.pool = o->pool;
-    proj.leds = o->leds;
-    proj.piece = o->piece < NPIECES ? o->piece : 0;
-    for (i = 0; i < NPIECES; i++) {
-        recipe(i, &r);
-        for (p = 0; p < P_NPARAMS; p++)
-            proj.slot[i].par[p] = p < V3_NPARAMS ? o->slot[i].par[p] : r.par[p];
-        proj.slot[i].pool = o->slot[i].pool;
-    }
-    recipe(proj.piece, &r);
-    for (p = 0; p < P_NPARAMS; p++)
-        proj.par[p] = p < V3_NPARAMS ? o->par[p] : r.par[p];
+    const en_param_t *pi = en_param_info(p);
+    return (int16_t)(v < pi->lo ? pi->def : v > pi->hi ? pi->def : v);
+}
+static void from_old(const int16_t *par, uint8_t leds, uint8_t piece)
+{
+    project_defaults();
+    proj.par[P_TUNE] = clampi(par[P_TUNE], P_TUNE);
+    proj.par[P_MIDI] = clampi(par[P_MIDI], P_MIDI);
+    proj.leds = leds <= 2u ? leds : 1u;
+    proj.piece = piece < NPIECES ? piece : 0u;
+    take(&proj.slot[proj.piece]);
 }
 
 int project_load(void)
@@ -117,14 +128,20 @@ int project_load(void)
     static union {
         project_t now;
         project_v3_t v3;
+        project_v4_t v4;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
     n = plat_store_load(OBJ_PROJ, &buf, sizeof buf);
-    if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 3u)
-        from_v3(&buf.v3);
-    else
-        proj = buf.now;
+    if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 3u) {
+        from_old(buf.v3.par, buf.v3.leds, buf.v3.piece);
+        return 0;
+    }
+    if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 4u) {
+        from_old(buf.v4.par, buf.v4.leds, buf.v4.piece);
+        return 0;
+    }
+    proj = buf.now;
     if (n >= 8 && project_valid())
         return 0;
     project_defaults();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (C) 2026 Charles Vestal
-// The browser build in Node: boot it, press a few keys, expect sound and screen frames.
+// The browser build in Node: boot it, press a few keys, expect sound and screen frames. (HALF-LIGHT: 8 s, not 1.2: its
+// first piece, Monochrome, breathes in slowly and is trimmed to the others' loudness; the threshold is unchanged.)
 import fs from "fs";
 const wasm = fs.readFileSync(process.argv[2]);
 let mem;
@@ -12,7 +13,7 @@ if (ex._initialize) ex._initialize();
 ex.web_master(2800); ex.web_boot();
 let peak = 0;
 const WHITE = [0,2,4,6,7,9,11,12,14,16,18,19,21,23,24,26];
-for (let i = 0; i < 400; i++) {
+for (let i = 0; i < 2800; i++) {
   if (i % 20 === 0 && i < 340) ex.web_keys(1 << WHITE[(i / 20) % 16]);
   ex.web_render(128);
   const l = new Float32Array(mem.buffer, ex.web_out_l(), 128);

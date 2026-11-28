@@ -1,9 +1,12 @@
 # the screen reader (fm1-reader, announce.c): a reader listens, and each page, knob, help card, button and
 # chord change is said once, in the screen's own text (the words file says it in full)
+# on Glitch Garden (piece 6), the one in D Dorian
 wait 200
+turn PRESET 5
+wait 300
 listen
 wait 100
-said Garden page: Tempo 72, Evolve 35, Motion 50, Drift 39 seconds. Piece Garden, D Dorian, growing
+said Garden page: Tempo 112, Evolve 55, Motion 80, Drift 45 seconds. Piece Glitch Garden, D Dorian, growing
 # (the garden follows, queued: the chord, how far to the next, the scale from the root up)
 listen
 where
@@ -11,7 +14,7 @@ said Scale D, E, F, G, A, B, C
 # a page settles before it is said
 tap ENV
 wait 300
-said Pad page: Level 60, Swell 60, Bright 40, Colour Rhodes
+said Pad page: Level 48, Swell 40, Bright 56, Voice Strings
 tap GLO
 wait 300
 said Setup page: Root D, Tune 0, MIDI out On, Lights On
@@ -24,25 +27,25 @@ wait 300
 said Lights Keys
 spin K4 -1
 wait 300
-# SELECT turns the pages
-turn SELECT -1
+# SELECT turns the pages (Setup, then Colour)
+turn SELECT 1
 wait 300
-said Space page: Echo 45, Echo time 1 bar, Reverb 65, Size 80
-spin K2 -1
+said Colour page: Chorus 20, Phaser 0, Glitch 70, Room 0
+spin K2 5
 wait 300
-said Echo time 1/2.
+said Phaser 5
 tap HOME
 wait 300
 said Garden page
 spin K4 20
 wait 300
-said Drift 1 minute 8 seconds
+said Drift 1 minute 17 seconds
 # HOME + SELECT: the tempo (the Garden's first knob says it)
 press HOME
 turn SELECT 2 200
 release HOME
 wait 300
-said Tempo 74
+said Tempo 114
 # the keys: a note out of the scale and back in; the root stays
 tapkey w1
 said REMOVED G
@@ -60,11 +63,11 @@ said MODE Phrygian
 turn ALGO -1
 said MODE Dorian
 turn PRESET 1
-said PIECE Departures, C# Ionian, tempo 60
+said PIECE Fragments, F# Phrygian, tempo 100
 wait 300
 unsaid Level
 turn PRESET -1
-said PIECE Garden, D Dorian, tempo 74
+said PIECE Glitch Garden, D Dorian, tempo 114
 wait 300
 # the buttons' messages, said once
 tap REC
@@ -80,9 +83,9 @@ said GROWING
 wait 300
 unsaid RESTING
 tap OCT+
-said BELL OCTAVE +1
-tap OCT-
 said BELL OCTAVE 0
+tap OCT-
+said BELL OCTAVE -1
 tap EDIT
 said NEXT CHORD ON THE BAR
 # a help card: its button, then its lines
@@ -97,7 +100,9 @@ wait 1000
 said REC button. FREEZE: THE CHORD HOLDS AND THE REVERB RINGS ON. AGAIN: THAW
 release REC
 wait 100
-# the chord moving by itself: queued (said after what is being said)
+# the chord moving: queued (said after what is being said). At Glitch Garden's tempo EDIT's chord above came on
+# its bar while the cards were up, so ask for the next one again
+tap EDIT
 wait 8000
 said Chord
 # a MIDI clock arriving, and start / stop from it
@@ -109,7 +114,7 @@ midi FC 00 00
 wait 300
 said RESTING
 wait 1000
-said Tempo 74
+said Tempo 114
 # WHERE: everything again
 where
-said Garden page: Tempo 74, Evolve 35, Motion 50, Drift 1 minute 8 seconds. Piece Garden, D Dorian, resting
+said Garden page: Tempo 114, Evolve 55, Motion 80, Drift 1 minute 17 seconds. Piece Glitch Garden, D Dorian, resting

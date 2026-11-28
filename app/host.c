@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: MPL-2.0
- * Copyright (C) 2026 Charles Vestal */
+ * Copyright (C) 2026 Charles Vestal
+ * Copyright (C) 2026 David (davidaparicio2205-dotcom): storev4, fps */
 /* AMB-1 in fm1-base's host simulator (host/plat_host.c, which includes app.c and so this): AMB-1's checks for
  * "expect", its command, a reboot and the screen reader's dump.
  *
  * AMB-1's checks: playing frozen view piece pool dirty sixteenths ext pad_level bass_level chordroot chordN loopnotes
- * parN battery (fm1-base's own: store_writes clocks_out midi_out peak_db_max peak_db_min). Its commands: storev3 N
- * (the project as AMB-1 0.9 before the layer pages wrote it, format 3, the playing piece's Pad at N); battery N (the
+ * parN battery fps era (fm1-base's own: store_writes clocks_out midi_out peak_db_max peak_db_min). Its commands: storev3 N,
+ * storev4 N (the project as AMB-1 0.9 before the layer pages wrote it, format 3, or AMB-1 1.x, format 4, its Pad at N); battery N (the
  * battery read as N, plat.h's plat_battery: -1..4; "battery off" the simulator's own, full). */
 
 int app_expect(const char *what, int *got)
@@ -23,6 +24,10 @@ int app_expect(const char *what, int *got)
         g = proj.pool;
     else if (!strcmp(what, "battery"))
         g = batt();
+    else if (!strcmp(what, "fps"))                /* the main band's frames a second (the eras' scenes) */
+        g = (int)vis.fps;
+    else if (!strcmp(what, "era"))
+        g = vis.era;
     else if (!strcmp(what, "dirty"))
         g = ui.dirty;
     else if (!strcmp(what, "sixteenths"))
@@ -58,25 +63,25 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         batt_host = (int8_t)(strcmp(a, "off") ? atoi(a) : -2);
         return 1;
     }
-    if (!strcmp(cmd, "storev3")) {
-        static project_v3_t o;
-        int i, k;
+    if (!strcmp(cmd, "storev3") || !strcmp(cmd, "storev4")) {   /* a project as an older format left it */
+        static union {
+            project_v3_t v3;
+            project_v4_t v4;
+        } o;
+        int k, v4 = cmd[6] == '4', np = v4 ? V4_NPARAMS : V3_NPARAMS;
+        int16_t *par = v4 ? o.v4.par : o.v3.par;
         memset(&o, 0, sizeof o);
-        o.magic = PROJ_MAGIC;
-        o.format = 3u;
-        for (k = 0; k < V3_NPARAMS; k++)
-            o.par[k] = proj.par[k];
-        o.par[P_PAD] = (int16_t)atoi(a);
-        o.pool = proj.pool;
-        o.leds = proj.leds;
-        o.piece = proj.piece;
-        for (i = 0; i < NPIECES; i++) {
-            for (k = 0; k < V3_NPARAMS; k++)
-                o.slot[i].par[k] = proj.slot[i].par[k];
-            o.slot[i].pool = proj.slot[i].pool;
+        o.v3.magic = PROJ_MAGIC;
+        o.v3.format = v4 ? 4u : 3u;
+        for (k = 0; k < np; k++)
+            par[k] = proj.par[k];
+        par[P_PAD] = (int16_t)atoi(a);
+        if (v4) {
+            o.v4.pool = proj.pool, o.v4.leds = proj.leds, o.v4.piece = proj.piece;
+        } else {
+            o.v3.pool = proj.pool, o.v3.leds = proj.leds, o.v3.piece = proj.piece;
         }
-        o.slot[proj.piece].par[P_PAD] = o.par[P_PAD];
-        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        plat_store_save(OBJ_PROJ, &o, v4 ? sizeof o.v4 : sizeof o.v3);
         return 1;
     }
     return 0;

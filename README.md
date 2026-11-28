@@ -1,21 +1,23 @@
-# AMB-1 for the M-VAVE FM-1
+# HALF-LIGHT for the M-VAVE FM-1
 
-AMB-1 turns the M-VAVE FM-1 into a generative ambient machine, inspired by Brian Eno's
-*Music for Airports*. It plays itself from the moment it's switched on: breathing voices, soft
-bells on tape loops of unequal length, a gliding bass and quiet Euclidean percussion, all through
-a tape echo, a long tape loop and a plate reverb. You don't perform it, you tend it: pick a piece
-and a scale, take notes out, put them back, and let it grow.
+HALF-LIGHT turns the M-VAVE FM-1 into a generative ambient machine in four eras, two pieces each: **After Dark**
+(monochrome and intimate), **Long Glow** (big pads, soft piano, neon haze), **Clean Signal** (a formant choir,
+strings, glitching bells) and **Cut & Paste** (fragments, two-step pulses, cold electronics). It plays itself from
+the moment it is switched on, and every era has its own moving screen that follows the sound. It is a fork of
+Charles Vestal's [AMB-1](https://github.com/charlesvestal/fm1-amb).
 
-![AMB-1's screen: the garden](docs/img/screen-garden.png) ![Voices](docs/img/screen-voices.png) ![Frozen](docs/img/screen-frozen.png)
+![The eight pieces' screens](docs/visuals/contact-sheet.png)
 
-- **Try it in your browser** (no FM-1 needed): <https://charlesvestal.github.io/fm1-amb/emu/>
-- **Install it** (Chrome or Edge, with the FM-1 plugged in): <https://charlesvestal.github.io/fm1-amb/install/>
-- **Read the manual**: <https://charlesvestal.github.io/fm1-amb/manual/> (source: [docs/MANUAL.md](docs/MANUAL.md))
-- **Download the firmware file**: [releases](https://github.com/charlesvestal/fm1-amb/releases)
+- **Try it in the emulator** (no FM-1 needed): open <https://joakimeriksson.github.io/fm1-emu/?fw=local&mhz=120>,
+  choose **Open .fwsc…**, pick `halflight.fwsc`, press **Start**
+- **Read the manual**: [docs/MANUAL.md](docs/MANUAL.md)
+- **The eras**: what each sounds and looks like, and why: [docs/ERA_BIBLE.md](docs/ERA_BIBLE.md),
+  [docs/VISUAL_SYSTEM.md](docs/VISUAL_SYSTEM.md), the captures in [docs/visuals](docs/visuals)
+- **Download the firmware file**: [releases](https://github.com/davidaparicio2205-dotcom/fm1-amb/releases), or the
+  *firmware* artifact of a CI run
 
-Installing it is at your own risk, though it's hard to get stuck: the web installer can put
-M-VAVE's own firmware back, and an FM-1 that fails to start twice comes up in a safe mode the
-installer can reach.
+Installing it is at your own risk, though it is hard to get stuck: M-VAVE's own firmware can be put back with
+the same tools, and an FM-1 that fails to start twice comes up in a safe mode an installer can reach.
 
 ## In short
 
@@ -23,45 +25,41 @@ installer can reach.
 |---|---|
 | Keys | The scale: each key adds its note or takes it out |
 | PLAY · REC · EDIT | Grow / rest · freeze · the next chord |
-| HOME · ENV · ARP · LFO · SEQ · FX · GLO | The pages: Garden, Pad, Bells, Bass, Pulse, Space, Setup; KNOB 1–4 set their values, a layer's level on KNOB 1 |
+| HOME · ENV · ARP · LFO · SEQ · FX · GLO · SEL | The pages: Garden, Pad, Bells, Bass, Pulse, Space, Setup, Colour; KNOB 1–4 set their values |
 | SELECT | The previous or next page; with HOME held, the tempo |
-| ALGORITHM · PRESETS | The mode · the piece (eight of them) |
+| ALGORITHM · PRESETS | The mode · the piece (eight, two an era) |
 | OCT− / OCT+ | The bells' octave |
 | SAVE | Saves; held, puts the piece back to its recipe |
 
-Hold any button for a second and a card says what it does.
-
-AMB-1 also tells the [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen
-shows, over USB: the page and its knobs, a knob's value as it turns, the piece, the chord as it moves,
-and what each button did.
-
-The [manual](https://charlesvestal.github.io/fm1-amb/manual/) has the rest.
+Hold any button for a second and a card says what it does. HALF-LIGHT also tells the
+[FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen shows, over USB.
 
 ## Building and testing
 
-AMB-1 is an app on [fm1-base](https://github.com/charlesvestal/fm1-base) (`base/`, a git submodule); clone with
-`--recursive`. The toolchain and prerequisites are in [BUILDING.md](BUILDING.md):
+HALF-LIGHT is an app on [fm1-base](https://github.com/charlesvestal/fm1-base) (`base/`, a git submodule); clone
+with `--recursive`. The toolchain and prerequisites are in [BUILDING.md](BUILDING.md), the subsystems and limits in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md):
 
 ```
-sh tests/run_tests.sh                                  # the instrument, the app in a simulator, the web builds
-./build.sh                                             # app/build/amb.fwsc
-python3 base/tools/fm1_install.py app/build/amb.fwsc   # install it over USB
+sh tests/run_tests.sh                       # the instrument, the app in a simulator, the web builds
+sh tools/render_all.sh 60 app/build/render  # every piece rendered offline and measured against the targets
+python3 tools/capture_visuals.py            # the eras' screens (GIFs, stills, sheets) into docs/visuals
+./build.sh                                  # app/build/halflight.fwsc
+tools/emulator_check.sh app/build/halflight.fwsc PATH/TO/fm1-live OUTDIR   # the emulator gate, 120 MHz
 ```
 
-`app/build/host/amb_host SCRIPT OUTDIR` runs the whole app on a computer from a script
-(`tests/scenarios/*.amb`), with audio and screenshots coming out. `./build.sh --web` builds the same code for the
-browser (the emulator); `web/app/build.sh` builds the engine alone into a web app for phone and desktop.
+Every pull request builds the package and runs all of this in CI (`.github/workflows/ci.yml`).
 
 ## Credits
 
-The idea comes from Brian Eno's generative music: *Music for Airports*' tape loops of unequal
-length, and the echo chain of *Discreet Music*. The reverb is Jon Dattorro's plate ("Effect Design,
-Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); the Euclidean
-rhythms are Godfried Toussaint's reading of Bjorklund's algorithm. AMB-1 is built on
-[fm1-base](https://github.com/charlesvestal/fm1-base) and [felucca-bsp](https://github.com/hugelton/felucca-bsp),
-from [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments). The idea of running
-FM-1 firmware in the browser comes from [Groove OS](https://www.groove-os.com/). MPL-2.0 (0.9 and earlier:
-GPL-3.0-only); see [LICENSING.md](LICENSING.md).
+HALF-LIGHT is Charles Vestal's AMB-1 with four eras added: the engine, the garden, the pages, the screen reader
+and the project are his. AMB-1's idea comes from Brian Eno's generative music (*Music for Airports*, *Discreet
+Music*). The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), as in
+[FoMni-1](https://github.com/charlesvestal/fm1-fomni). It is built on [fm1-base](https://github.com/charlesvestal/fm1-base)
+and [felucca-bsp](https://github.com/hugelton/felucca-bsp), from [Felucca](https://github.com/hugelton/Felucca) by
+Leo Kuroshita (Hügelton Instruments), and tested in Joakim Eriksson's [fm1-emu](https://github.com/joakimeriksson/fm1-emu).
+The eras take their mood from a band's ambient and instrumental work and copy nothing of it
+([docs/ERA_BIBLE.md](docs/ERA_BIBLE.md), the self-audit). MPL-2.0; see [LICENSING.md](LICENSING.md).
 
-M-VAVE and FM-1 are trademarks of their owners. AMB-1 is not affiliated with M-VAVE, Brian Eno or
-Hügelton Instruments.
+M-VAVE and FM-1 are trademarks of their owners. HALF-LIGHT is not affiliated with M-VAVE, Brian Eno,
+Hügelton Instruments or any band.

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
- * Copyright (C) 2026 Charles Vestal */
+ * Copyright (C) 2026 Charles Vestal
+ * Copyright (C) 2026 David (davidaparicio2205-dotcom): HALF-LIGHT, AMB-1's four-era fork */
 /* AMB-1 app: the project (everything that is saved), the app's entry points and its half of the contract with
  * fm1-base (device/unity.c, host/plat_host.c). */
 #pragma once
@@ -7,7 +8,10 @@
 #include "plat.h"
 #include "amb.h"
 
-#define APP_NAME "AMB-1"
+#define APP_NAME "HALF-LIGHT"
+#define APP_TAGLINE "four eras of night music"
+#define APP_SPLASH                       /* app_splash (visuals.c): the name on the night, not on paper */
+void app_splash(void);
 #define APP_BLOCK 256u                   /* frames per audio block: 5.8 ms at 44.1 kHz */
 #ifdef APP_VERSION                       /* a release build passes its own (tools/build.py --release) */
 #define EN_VERSION APP_VERSION
@@ -20,8 +24,9 @@
 enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 #define APP_STORE_MAP {0xFC000u, 0xDC000u}
 #define PROJ_MAGIC 0x314F4E45u           /* "ENO1" */
-#define PROJ_FORMAT 4u                   /* 4: the bass's and the pulse's own settings (3 is carried over;
-                                          * older formats give the recipes) */
+#define PROJ_FORMAT 5u                   /* 5: the eras (colour settings, Pattern 0..7, Trim); 3 and 4 keep the
+                                          * player's own (Tune, MIDI out, lights, piece) over the new recipes;
+                                          * anything else gives the defaults */
 #define NPIECES EN_NPIECES
 
 typedef struct {

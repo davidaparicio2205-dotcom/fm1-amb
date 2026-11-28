@@ -48,13 +48,16 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 /* parameters: value ranges in en_param_info() */
 enum {
     P_PAD, P_BELLS, P_BASS, P_PULSE,                  /* layer levels */
-    P_DENSITY, P_EVOLVE, P_DRIFT, P_HITS,             /* motion */
+    P_DENSITY, P_EVOLVE, P_DRIFT, P_PATTERN,          /* motion; PATTERN: which of the eight fixed grooves */
     P_ECHO, P_ETIME, P_REVERB, P_SIZE,                /* space */
     P_BRIGHT, P_SWELL, P_BTONE, P_MOTION,             /* tone */
     P_TUNE, P_MIDI, P_TEMPO, P_ROOT, P_MODE, P_BOCT,  /* setup, panel encoders, bell octave */
-    P_PADTONE,                                        /* the pad's colour, set by the piece: Rhodes, Voices */
+    P_PADTONE,                                        /* the pad's colour: Rhodes, Voices, Strings, Formant */
     P_BASSOCT, P_GLIDE, P_FIFTH,                      /* bass: its octave, its glide, how often it leans on the fifth */
     P_SWING, P_HATS,                                  /* pulse: swing, the hats' colour */
+    P_CHORUS, P_PHASER, P_GLITCH, P_ROOM,             /* colour: the pad's chorus and phaser, the bells' stutter, the
+                                                       * snare's gated room */
+    P_TRIM,                                           /* the piece's output level, dB (the recipe's; on no page) */
     P_NPARAMS
 };
 typedef struct {
@@ -114,5 +117,16 @@ const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4"
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
 #define EN_NPIECES 8
+#define EN_NERAS 4                             /* the pieces in pairs: piece i is of era i / 2 */
 const char *en_piece_name(int i);
+const char *en_era_name(int era);
 void en_piece(int i, int16_t *par, uint16_t *pool);
+
+#ifdef EN_HOST
+/* the host's render harness (tests/host/render.c): what the output stage saw, before the soft limiter */
+typedef struct {
+    float pre_max;                               /* the largest |x| into the tanh */
+    uint32_t sat, nonfinite, denorm;             /* samples past 1.0 into it (deep in its knee); NaN or inf; subnormal */
+} en_host_stats_t;
+extern en_host_stats_t en_host;
+#endif

@@ -2,7 +2,10 @@
 wav first.wav
 wait 200
 expect playing 1
-expect pool 0x6AD
+# the first piece, Monochrome: A Aeolian
+expect pool 0x5AD
+expect par19 9
+expect era 0
 wait 6000
 shot garden.png
 expect pad_level >40
@@ -31,6 +34,14 @@ shot space.png
 tap GLO
 wait 100
 shot setup.png
+tap SEL
+wait 100
+shot colour.png
+expect view 7
+tap GLO
+# the screen keeps its pace: 30 frames a second (the eras' scenes)
+wait 2000
+expect fps >27
 # SELECT steps through the pages, from the last back to the first
 turn SELECT -6 100
 expect view 0
