@@ -104,33 +104,59 @@ static void px_add(int32_t x, int32_t y, int r, int g, int b)
     }
     *q = swap16((uint32_t)((R > 31 ? 31 : R) << 11 | (G > 63 ? 63 : G) << 5 | (B > 31 ? 31 : B)));
 }
-/* a soft round glow, added: the light falls off as (1 - d^2/r^2)^2 (no square root), k its strength 0..1 */
+/* a soft round glow, added: the light falls off as (1 - d^2/r^2)^2 (no square root), k its strength 0..1. Integer
+ * spans: each row's reach from the circle, the falloff from a 64-step table of u = 1 - d^2/r^2 */
+static uint8_t glow_lut[65];
 static void glow(float cx, float cy, float r, const uint8_t *c, float k)
 {
-    int32_t x0 = (int32_t)(cx - r), x1 = (int32_t)(cx + r), y0 = (int32_t)(cy - r), y1 = (int32_t)(cy + r), x, y;
-    float ir2 = 1.0f / (r * r);
+    int32_t y0, y1, y, icx, icy, ir;
+    int32_t kq;
     if (k <= 0.01f || r < 1.0f)
         return;
-    if (y0 < 0)
-        y0 = 0;
-    if (y1 > (int32_t)cv_h - 1)
-        y1 = (int32_t)cv_h - 1;
-    for (y = y0; y <= y1; y++) {
-        float dy = (float)y - cy, dy2 = dy * dy;
-        for (x = x0; x <= x1; x++) {
-            float dx = (float)x - cx, u = 1.0f - (dx * dx + dy2) * ir2, a;
-            if (u <= 0.0f)
+    if (!glow_lut[64]) {
+        int i;
+        for (i = 0; i <= 64; i++)
+            glow_lut[i] = (uint8_t)((i * i * 255 + 2048) / 4096);
+    }
+    icx = (int32_t)cx, icy = (int32_t)cy, ir = (int32_t)r;
+    kq = (int32_t)(fm_minf(k, 1.0f) * 256.0f);
+    y0 = icy - ir < 0 ? 0 : icy - ir;
+    y1 = icy + ir > (int32_t)cv_h - 1 ? (int32_t)cv_h - 1 : icy + ir;
+    {
+        const int32_t r2 = ir * ir, inv = (64 << 16) / (r2 > 0 ? r2 : 1);
+        for (y = y0; y <= y1; y++) {
+            int32_t dy = y - icy, rem = r2 - dy * dy, x, x0, x1, w;
+            if (rem <= 0)
                 continue;
-            a = u * u * k;
-            px_add(x, y, (int)((float)c[0] * a), (int)((float)c[1] * a), (int)((float)c[2] * a));
+            w = (int32_t)fm_sqrtf((float)rem);
+            x0 = icx - w < 0 ? 0 : icx - w;
+            x1 = icx + w > 239 ? 239 : icx + w;
+            for (x = x0; x <= x1; x++) {
+                int32_t dx = x - icx, u = ((rem - dx * dx) * inv) >> 16, a;
+                if (u <= 0)
+                    continue;
+                a = glow_lut[u > 64 ? 64 : u] * kq;         /* 0..65280 */
+                px_add(x, y, (c[0] * a) >> 16, (c[1] * a) >> 16, (c[2] * a) >> 16);
+            }
         }
     }
 }
-static void vgrad(int32_t y0, int32_t h, uint16_t c0, uint16_t c1)   /* a vertical gradient, row by row */
+/* a vertical gradient, row by row, at the panel's full precision (a, b: RGB 0..255; plus a light that rises as t^2
+ * towards the bottom, its colour l and strength k) */
+static void vgrad3(const uint8_t *a, const uint8_t *b, const uint8_t *l, float k)
 {
-    int32_t y;
-    for (y = 0; y < h; y++)
-        cv_rect(0, y0 + y, (int32_t)cv_w, 1, mix(c0, c1, (int)(y * 16 / (h > 1 ? h - 1 : 1))));
+    int32_t y, i;
+    for (y = 0; y < 144; y++) {
+        float t = (float)y * (1.0f / 143.0f), h = t * t * k, c[3];
+        uint16_t lo, hi, *row = &cv_px[(uint32_t)(y + cv_oy) * cv_w];
+        int32_t x;
+        for (i = 0; i < 3; i++)
+            c[i] = fm_clampf((float)a[i] + ((float)b[i] - (float)a[i]) * t + ((float)l[i] - (float)a[i]) * h, 0.0f, 251.0f);
+        lo = swap16(RGB((int)c[0], (int)c[1], (int)c[2]));   /* a half step apart, in a checkerboard: no bands */
+        hi = swap16(RGB((int)c[0] + 4, (int)c[1] + 2, (int)c[2] + 4));
+        for (x = 0; x < 240; x++)
+            row[x] = ((x ^ y) & 1) ? hi : lo;
+    }
 }
 static void hline_a(int32_t x0, int32_t x1, int32_t y, uint16_t c, int a)
 {
@@ -266,18 +292,26 @@ static void scene_dark(void)
     const int32_t L0 = 58, L1 = 192, HZ = 100;
     int l, s, i;
     float kick = en_drum_glow[0], sn = en_drum_glow[2], echo = (float)proj.par[P_ECHO] * 0.01f, b = vis.breath;
-    vgrad(0, 144, RGB(8, 8, 8), RGB(24, 24, 24));
+    {
+        static const uint8_t TOP[3] = {8, 8, 8}, BOT[3] = {24, 24, 24};
+        vgrad3(TOP, BOT, BOT, 0.0f);
+    }
     {   /* the haze along the horizon: a band of light, wider and brighter as the bass breathes */
         float k = 0.10f + 0.30f * en_bass_level * b, hh = 14.0f + 10.0f * b;
-        int32_t y, x;
-        for (y = HZ - (int32_t)hh; y <= HZ + (int32_t)hh; y++) {
-            float dy = (float)(y - HZ) / hh, u = 1.0f - dy * dy;
-            for (x = L0 - 10; x <= L1 + 6; x += 1) {
-                float dx = (float)(x - 125) * (1.0f / 80.0f), v = u * (1.0f - dx * dx);
-                if (v > 0.0f) {
-                    int l = (int)(150.0f * v * v * k);
+        int32_t y, x, ih = (int32_t)hh;
+        static int16_t col[240];                 /* the band's shape across, 0..256 */
+        for (x = L0 - 10; x <= L1 + 6; x++) {
+            int32_t dx = x - 125;
+            col[x] = (int16_t)(dx * dx < 6400 ? 256 - dx * dx * 256 / 6400 : 0);
+        }
+        for (y = HZ - ih; y <= HZ + ih; y++) {
+            int32_t dy = y - HZ, u = 256 - dy * dy * 256 / (ih * ih + 1), lk = (int32_t)(150.0f * k);
+            if (u <= 0)
+                continue;
+            for (x = L0 - 10; x <= L1 + 6; x++) {
+                int32_t v = (u * col[x]) >> 8, l = (v * v >> 8) * lk >> 8;
+                if (l > 0)
                     px_add(x, y, l, l, l);
-                }
             }
         }
     }
@@ -354,14 +388,16 @@ static void scene_glow(void)
     const float cx = 126.0f, cy = 76.0f, b = vis.breath;
     int i, l, s;
     float kick = en_drum_glow[0], rev = (float)proj.par[P_REVERB] * 0.01f;
-    vgrad(0, 144, RGB(14, 8, 34), RGB(58, 16, 64));
-    glow(120.0f, 160.0f, 120.0f, VIOLET, 0.25f + 0.35f * en_bass_level * b);   /* the haze: the bass's breath */
+    {   /* the ground, and the haze rising from below with the bass's breath */
+        static const uint8_t TOP[3] = {14, 8, 34}, BOT[3] = {58, 16, 64};
+        vgrad3(TOP, BOT, VIOLET, 0.25f + 0.35f * en_bass_level * b);
+    }
     for (i = 0; i < EN_NPAD; i++) {              /* the pad: four slow glows */
         float a = en_pad_amp[i] * (float)proj.par[P_PAD] * 0.012f, t = (float)plat_ms() * 0.001f;
         float x = cx + 62.0f * sine(fm_fabsf(t * (0.011f + 0.004f * (float)i) + 0.23f * (float)i)) - 31.0f + (float)(i - 2) * 14.0f;
         float y = cy + 30.0f * sine(fm_fabsf(t * (0.017f + 0.003f * (float)i) + 0.61f * (float)i)) - 15.0f;
         if (a > 0.02f)
-            glow(x, y, 30.0f + 12.0f * a + 8.0f * rev, (i & 1) ? BLUE : PINK, 0.22f + 0.5f * fm_minf(a, 1.0f));
+            glow(x, y, 26.0f + 10.0f * fm_minf(a, 1.0f) + 6.0f * rev, (i & 1) ? BLUE : PINK, 0.22f + 0.5f * fm_minf(a, 1.0f));
     }
     for (l = 0; l < EN_NLOOP; l++) {             /* the loops, in neon */
         int len = EN_LOOP_LEN[l], pos = en_loop_pos[l];
@@ -435,7 +471,12 @@ static void scene_signal(void)
     int l, s, i;
     float kick = en_drum_glow[0], sn = en_drum_glow[2], mach = fm_clampf(en_arc * 2.5f, 0.0f, 1.0f), b = vis.breath;
     int32_t y;
-    cv_rect(0, 0, 240, 144, mix(K_BG, K_PANEL, (int)(6.0f * b * en_bass_level)));   /* the breath: a little light */
+    {   /* the ground (a little light with the bass's breath) and its scanlines */
+        uint16_t g = mix(K_BG, K_PANEL, (int)(6.0f * b * en_bass_level)), sl = mix(g, K_LINE, 3);
+        cv_rect(0, 0, 240, 144, g);
+        for (y = 0; y < 144; y += 2)
+            cv_rect(0, y, 240, 1, sl);
+    }
     for (y = 6; y < 144; y += 12)                /* the grid */
         cv_rect(X0, y, X1 - X0, 1, kick > 0.4f ? K_DIM : K_LINE);
     for (s = X0; s <= X1; s += 17)
@@ -470,8 +511,6 @@ static void scene_signal(void)
             }
         }
     }
-    for (y = 0; y < 144; y += 2)                 /* scanlines */
-        hline_a(0, 239, y, RGB(0, 0, 0), 9);
     if (mach > 0.05f && en_playing) {            /* the machine's half: slices shift on the pulse's hits */
         float hit = fm_maxf(kick, fm_maxf(sn, en_drum_glow[1] * 0.6f));
         if (hit > 0.5f) {
