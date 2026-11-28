@@ -567,7 +567,7 @@ static struct {
 static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / the glide's time in samples */
 
 /* ----------------------------------------------------------------- bells --- */
-#define NBELL 8                                 /* (8: room for Glitch's stutters) */
+#define NBELL 6
 typedef struct {
     float cph, mph, cinc, minc, amp, adec, idx, idec, att, gl, gr;
     int32_t wait;
@@ -583,7 +583,8 @@ static const float RATIO[5] = {1.0f, 2.0f, 3.0f, 3.5f, 4.77f};
 
 /* ----------------------------------------------------------------- pulse --- */
 typedef struct {
-    float ph, inc, inc_end, amp, adec, idx, x1, x2, att, mph[4], pend;
+    float ph, inc, inc_end, amp, adec, idx, x1, x2, att, pend;
+    uint32_t mph[4];                            /* the hats' four square waves, integer phases (the sign bit is the wave) */
     int32_t wait;                               /* swing: samples until a hit that waits (pend: its velocity) */
     uint8_t on, note, snare, pkind;             /* snare: the second voice rings as a snare, not an open hat */
 } drum_t;
@@ -595,7 +596,8 @@ static float step_len, pulse_left;               /* a sixteenth, in samples; to 
 static uint32_t noise = 22222u;
 static const uint8_t DRUM_GM[EN_NDRUM] = {36, 42, 46};          /* kick, closed hat, open hat */
 /* the hats' metal: four square waves at the 808's inharmonic ratios (Hz / EN_SR) */
-static const float HAT_INC[4] = {304.4f / EN_SR, 369.6f / EN_SR, 522.7f / EN_SR, 800.0f / EN_SR};
+/* (as 32-bit phase steps: 304.4, 369.6, 522.7 and 800 Hz, f / 44100 * 2^32) */
+static const uint32_t HAT_INC[4] = {29645987u, 35995916u, 50906562u, 77913238u};
 
 /* ------------------------------------------------------------------ space --- */
 static float echo_send, rev_send, echo_len, echo_len_t, echo_fb = 0.55f, trim = 1.0f;
@@ -779,6 +781,7 @@ static void loop_pass(int l)                    /* the end of a pass: grow, prun
 static const float LOOP_IDX[EN_NLOOP] = {1.0f, 0.55f, 1.5f, 0.8f}, LOOP_DEC[EN_NLOOP] = {1.0f, 1.35f, 0.75f, 1.6f};
 static const int8_t LOOP_RAT[EN_NLOOP] = {0, 0, 1, -1};
 
+static float bell_short = 1.0f;                 /* a stutter's strikes ring short (0.25): fewer voices at once */
 static void bell_voice(int l, int n, float vel, int32_t wait)
 {
     int i, best = 0, ri;
@@ -804,7 +807,7 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     /* the top of the register softer: above G6 a pure partial pierces (2..6 kHz), -2 dB a semitone */
     v->amp = n > 91 ? vel * fm_db2lin(-2.0f * (float)(n - 91)) : vel;
     t60 = 4.2f - (float)(n - 60) * 0.06f;       /* the low bells ring longer */
-    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l];
+    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l] * bell_short;
     v->adec = fm_expf(-6.9f / (t60 * EN_SR));
     /* Bell tone: 0 a round, nearly pure tone; 100 a long metallic clang (index in radians, as turns) */
     v->idx = (0.15f + 6.5f * btone * btone) * LOOP_IDX[l] * (0.6f + 0.4f * vel) * (1.0f / FM_TWO_PI);
@@ -827,17 +830,20 @@ static void bell_ring(int l, int slot)
     float vel = (float)loop_vel[l][slot] * 0.01f;
     int32_t wait = irand(2600);                 /* a human hand: up to 60 ms late */
     bell_voice(l, n, vel, wait);
-    /* Glitch: now and then the bell stutters, as a buffer caught repeating: 2..4 more strikes on the 32nd notes, each
-     * quieter, the last sometimes an octave up. On the grid (no human lateness after the first), so it stays in time */
+    /* Glitch: now and then the bell stutters, as a buffer caught repeating: 2..3 more strikes on the 32nd notes, each
+     * quieter and short, the last sometimes an octave up. On the grid (no human lateness after the first), so it stays
+     * in time */
     if (glitch > 0.0f && frand() < glitch * 0.3f) {
-        int r, reps = 2 + irand(3);
+        int r, reps = 2 + irand(2);
         int32_t st = (int32_t)(step_len * 0.5f);
         float g = vel;
+        bell_short = 0.25f;
         for (r = 1; r <= reps; r++) {
             int nn = (r == reps && n + 12 <= 103 && frand() < glitch * 0.5f) ? n + 12 : n;
             g *= 0.62f;
             bell_voice(l, nn, g, wait + r * st);
         }
+        bell_short = 1.0f;
         return;
     }
     if (n + 12 <= 103 && frand() < 0.08f + 0.12f * fm_maxf(arcm, 0.0f))
@@ -1671,13 +1677,10 @@ static void render_pad(uint32_t n)
             }
             if (v->voices == 3) {                /* Formant: a buzz through two narrow vowel resonances (a vocoder's
                                                   * choir, without the speech) */
-                x = blep_saw(p0, v->inc[0]) + 0.5f * blep_saw(p1, v->inc[1]);
+                x = 1.4f * blep_saw(p0, v->inc[0]);
                 p0 += v->inc[0];
                 if (p0 >= 1.0f)
                     p0 -= 1.0f;
-                p1 += v->inc[1];
-                if (p1 >= 1.0f)
-                    p1 -= 1.0f;
             } else {
                 /* as Discreet Music's Synthi: a mellow triangle (a sine's neighbour), a little saw in it */
                 x = (p0 < 0.5f ? 4.0f * p0 - 1.0f : 3.0f - 4.0f * p0) * 1.4f + 0.45f * blep_saw(p0, v->inc[0]) + 0.6f * sine(p0);
@@ -1824,9 +1827,7 @@ static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
         float in = 0.0f, hp, x;
         for (k = 0; k < 4; k++) {
             v->mph[k] += HAT_INC[k];
-            if (v->mph[k] >= 1.0f)
-                v->mph[k] -= 1.0f;
-            in += v->mph[k] < 0.5f ? 0.25f : -0.25f;
+            in += (int32_t)v->mph[k] >= 0 ? 0.25f : -0.25f;
         }
         noise = noise * 1664525u + 1013904223u;
         in = 0.5f * in + 0.6f * (float)(int32_t)noise * (1.0f / 2147483648.0f);
@@ -1911,8 +1912,8 @@ static void render_room(uint32_t n)
 {
     uint32_t j;
     int k;
-    if (room <= 0.0f || !groove_snr)
-        return;
+    if (room <= 0.0f || !groove_snr || (gate_hold <= 0 && gate_env < 1e-4f))
+        return;                                  /* off, or the gate shut: nothing of it is heard */
     for (j = 0; j < n; j++) {
         float in = gsend[j], o[3], y, gt;
         for (k = 0; k < 3; k++) {                /* a comb: its output darkened, fed back */
