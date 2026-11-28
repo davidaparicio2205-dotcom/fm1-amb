@@ -60,7 +60,7 @@ static const struct {
     {"Glitch Garden", {48, 52, 44, 40, 55, 55, 30, 5, 45, 1, 48, 58, 56, 40, 22, 80, 0, 1, 112, 2, 1, -1, 2, 0, 15, 10, 30, 35, 20, 0, 70, 0, 6}},
     /* era 4, cut and paste: fragments, two-step garage, cold electronics, uneasy bells */
     {"Fragments",    {38, 46, 50, 34, 45, 75, 25, 7, 55, 5, 55, 70, 46, 30, 22, 90, 0, 1, 100, 6, 2, -1, 1, 0, 55, 10, 0, 35, 0, 0, 55, 0, 6}},
-    {"Static Folk",  {42, 40, 52, 42, 55, 85, 20, 6, 48, 2, 48, 58, 50, 40, 35, 95, 0, 1, 112, 4, 7, 0, 3, 0, 40, 10, 55, 35, 25, 0, 30, 30, 8}},
+    {"Static Folk",  {42, 40, 52, 42, 55, 85, 20, 6, 48, 2, 48, 58, 50, 40, 35, 95, 0, 1, 112, 4, 7, 0, 3, 0, 40, 10, 55, 35, 25, 0, 45, 0, 8}},
 };
 
 static const char *const ERA_NAME[EN_NERAS] = {"After Dark", "Long Glow", "Clean Signal", "Cut & Paste"};
