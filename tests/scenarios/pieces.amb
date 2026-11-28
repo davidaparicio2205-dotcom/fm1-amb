@@ -1,55 +1,62 @@
-# the pieces: PRESETS picks one, each remembers its settings, SAVE held resets one, all saved
+# the pieces: PRESETS picks one (two an era), each remembers its settings, SAVE held resets one, all saved
 wait 500
 expect piece 0
-# Garden's pad down (the Pad page: ENV)
+expect era 0
+# Monochrome's pad down (the Pad page: ENV)
 tap ENV
 spin K1 -10
 expect par0 50
-# the next piece: Departures, its recipe (tempo 60, no pulse, C# Ionian)
+# the next piece: Night Bus, its recipe (tempo 90, a pulse, A Dorian, the Strings)
 turn PRESET 1
 expect piece 1
-expect par18 60
-expect par3 0
-expect par19 1
-expect pool 0xAB5
+expect era 0
+expect par18 90
+expect par3 42
+expect par19 9
+expect pool 0x6AD
+expect par22 2
 wait 8000
-shot departures.png
-# and Voices
+shot night_bus.png
+# and Pale Piano: the next era, no pulse, the Rhodes
 turn PRESET 1
 expect piece 2
-expect par1 0
+expect era 1
+expect par3 0
+expect par1 20
 wait 20000
-shot voices.png
+shot pale_piano.png
 expect pad_level >10
-# the pad's colour (the Pad page's fourth knob), kept with the piece (Voices starts as Voices)
-expect par22 1
-spin K4 -1
+# the pad's voice (the Pad page's fourth knob), kept with the piece
 expect par22 0
-wait 3000
-# back to Garden: as it was left
-turn PRESET -2
-expect par22 0
-expect piece 0
-expect par0 50
 spin K4 1
 expect par22 1
-turn PRESET 2
-expect par22 0
+wait 3000
+# back to Monochrome: as it was left
 turn PRESET -2
 expect par22 1
-# SAVE held: Garden's recipe again
+expect piece 0
+expect era 0
+expect par0 50
+spin K4 1
+expect par22 2
+turn PRESET 2
+expect par22 1
+turn PRESET -2
+expect par22 2
+# SAVE held: Monochrome's recipe again
 press SAVE
 wait 1700
 release SAVE
 expect par0 60
-expect par22 0
+expect par22 1
 expect store_writes 0
 # a tweak, saved, survives a reboot, on the piece it was made on (the Bells page: ARP)
 tap ARP
 spin K1 5
-expect par1 70
+expect par1 39
 turn PRESET 6
 expect piece 6
+expect era 3
 tap SAVE
 expect store_writes 1
 reboot
@@ -57,4 +64,10 @@ wait 300
 expect piece 6
 turn PRESET 2
 expect piece 0
-expect par1 70
+expect par1 39
+# the new settings of the eras, on their page (SEL): Monochrome's chorus and phaser
+tap SEL
+expect par28 55
+expect par29 45
+spin K1 -5
+expect par28 50

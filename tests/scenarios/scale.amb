@@ -1,4 +1,9 @@
-# the keys are the scale: toggles, the root stays, three notes at least; modes and the root
+# the keys are the scale: toggles, the root stays, three notes at least; modes and the root.
+# On Glitch Garden (piece 6), the one in D Dorian
+wait 300
+turn PRESET 5
+expect piece 5
+expect pool 0x6AD
 wait 300
 # D Dorian: D E F G A B C. F#3 is key 1: add F# (relative 4)
 tapkey 1

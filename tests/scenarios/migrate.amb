@@ -1,20 +1,43 @@
-# a project saved by 0.9 before the layer pages (format 3) loads with its settings; the bass's and
-# the pulse's new ones come from each piece's recipe
+# projects saved before the eras (format 3: AMB-1 0.9 before the layer pages; format 4: AMB-1 1.x and this fork's
+# first rounds) load safely: the pieces in their slots are other pieces now, so each takes the eras' recipe, and only
+# the player's own settings carry over: Tune, MIDI out, the lights, the piece that was playing
 wait 300
+tap GLO
+spin K2 7
+expect par16 7
 turn PRESET 4
 expect piece 4
 storev3 33
 reboot
 wait 300
 expect piece 4
-expect par0 33
-expect par23 0
-expect par24 10
-expect par25 45
-expect par26 30
-expect par27 70
+expect par16 7
+# Glass Choir's recipe, not the old project's Pad of 33
+expect par0 62
+expect par22 3
+expect par28 30
+expect par32 7
 tap SAVE
 reboot
 wait 300
-expect par0 33
-expect par26 30
+expect par0 62
+expect par16 7
+# format 4 (28 settings a piece): the same
+turn PRESET 2
+expect piece 6
+storev4 21
+reboot
+wait 300
+expect piece 6
+expect par16 7
+expect par0 38
+expect par7 7
+expect par30 55
+# and the slots still remember: a tweak on the migrated project, saved
+tap ENV
+spin K1 2
+expect par0 40
+tap SAVE
+reboot
+wait 300
+expect par0 40

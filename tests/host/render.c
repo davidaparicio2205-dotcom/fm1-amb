@@ -7,6 +7,7 @@
  * fundamental, the bass's attack and sustain, and how alike the pulse's bars are. Also the engine's host CPU time.
  *
  *   render PIECE SECONDS [--wav OUT.wav] [--solo pad|bells|bass|pulse] [--mode M] [--master Q12] [--json OUT.json]
+ *          [--set P=V ...]   (parameter P, amb.h's P_*, at V)
  *
  * The metrics go to stdout (and OUT.json) as one JSON object. tools/render_all.sh runs every piece; tools/metrics.py
  * makes the table and checks the targets (docs/ERA_BIBLE.md, Acceptance). */
@@ -119,7 +120,7 @@ static double band_db(double lo, double hi, double tot)
 
 int main(int argc, char **argv)
 {
-    int piece, mode = -1, solo = -1, i, master = 1024, a;
+    int piece, mode = -1, solo = -1, i, master = 1024, a, nset = 0, set_p[16], set_v[16];
     double secs;
     const char *wav = 0, *json = 0;
     FILE *wf = 0, *jf = 0;
@@ -150,7 +151,10 @@ int main(int argc, char **argv)
             mode = atoi(argv[++a]);
         else if (!strcmp(argv[a], "--master") && a + 1 < argc)
             master = atoi(argv[++a]);
-        else if (!strcmp(argv[a], "--solo") && a + 1 < argc) {
+        else if (!strcmp(argv[a], "--set") && a + 1 < argc && nset < 16) {   /* --set P=V: parameter P (amb.h) */
+            set_p[nset] = atoi(argv[++a]);
+            set_v[nset++] = atoi(strchr(argv[a], '=') ? strchr(argv[a], '=') + 1 : "0");
+        } else if (!strcmp(argv[a], "--solo") && a + 1 < argc) {
             const char *s = argv[++a];
             for (i = 0; i < 4; i++)
                 if (!strcmp(s, LAYER[i]))
@@ -174,6 +178,10 @@ int main(int argc, char **argv)
     }
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, par[i]);
+    for (i = 0; i < nset; i++)
+        par[set_p[i]] = (int16_t)set_v[i];
+    for (i = 0; i < nset; i++)
+        en_set(set_p[i], set_v[i]);
     if (solo >= 0)
         for (i = 0; i < 4; i++)
             if (i != solo)
@@ -190,10 +198,20 @@ int main(int argc, char **argv)
     }
     c0 = clock();
     double eng = 0.0;
+    static int ev[1024];                         /* the bass's events: the start, then every chord change (10 ms frames) */
+    int nev = 1;
+    uint32_t sig = 0xFFFFFFFFu;
+    ev[0] = 0;
     while (done < frames) {
         int n = 256, j;
         clock_t t0 = clock();
         en_render(buf, (uint32_t)n, (uint32_t)master);
+        {
+            uint32_t s2 = en_chord_root;
+            if (sig != 0xFFFFFFFFu && s2 != sig && nev < 1024)
+                ev[nev++] = (int)(done / 441);
+            sig = s2;
+        }
         eng += (double)(clock() - t0);
         for (j = 0; j < n; j++) {
             float l = (float)buf[2 * j] / 8388608.0f, r = (float)buf[2 * j + 1] / 8388608.0f, m = 0.5f * (l + r);
@@ -322,46 +340,43 @@ int main(int argc, char **argv)
             kick_f = ((double)b + d) * SR / NFFT;
         }
     }
-    /* the bass (alone): every rise of its 10 ms envelope by 6 dB or more, its 10..90 % time; and how much of the peak is
-     * left 2 s after it (a pluck falls away, a drone holds) */
+    /* the bass (alone), at each of its events (the start, every change of the chord's root): the envelope's low in
+     * the first 400 ms, its high in the 5 s after; the 10..90 % time between them (a rise of 3 dB or more only), and
+     * how much of the high is left 2 s later (a pluck falls away, a drone holds). The 10 ms frames smoothed over
+     * 50 ms first: the bass's period is up to 40 ms */
     double att_min = -1.0, att_med = -1.0, sus_med = -1.0;
     int rises = 0;
     if (solo == 2) {
-        double att[512], sus[512];
-        int t = 0;
-        float emax = 0.0f;
-        {   /* the 10 ms frames smoothed over 100 ms (the bass's period is up to 40 ms), and the rises that matter: to at
-             * least a tenth of the loudest */
-            float *sm = calloc((size_t)nenv + 1, sizeof *sm), acc = 0.0f;
-            for (i = 0; i < nenv; i++) {
-                acc += envl[i] * envl[i] - (i >= 10 ? envl[i - 10] * envl[i - 10] : 0.0f);
-                sm[i] = sqrtf(fmaxf(acc, 0.0f) / 10.0f);
-                emax = fmaxf(emax, sm[i]);
-            }
-            memcpy(envl, sm, (size_t)nenv * sizeof *sm);
-            free(sm);
+        double att[1024], sus[1024];
+        float *sm = calloc((size_t)nenv + 1, sizeof *sm), acc = 0.0f;
+        int e;
+        for (i = 0; i < nenv; i++) {
+            acc += envl[i] * envl[i] - (i >= 5 ? envl[i - 5] * envl[i - 5] : 0.0f);
+            sm[i] = sqrtf(fmaxf(acc, 0.0f) / 5.0f);
         }
-        while (t < nenv - 1 && rises < 512) {
-            int lo = t, hi;
-            while (lo + 1 < nenv && envl[lo + 1] <= envl[lo])
-                lo++;
-            hi = lo;
-            while (hi + 1 < nenv && envl[hi + 1] >= envl[hi] * 0.999f)
-                hi++;
-            if (hi > lo && envl[hi] > 0.1f * emax && envl[hi] > envl[lo] * 2.0f) {
-                float a10 = envl[lo] + 0.1f * (envl[hi] - envl[lo]), a90 = envl[lo] + 0.9f * (envl[hi] - envl[lo]);
-                int p = lo, q;
-                while (p < hi && envl[p] < a10)
-                    p++;
-                q = p;
-                while (q < hi && envl[q] < a90)
-                    q++;
-                att[rises] = (double)(q - p) * 0.01;
-                sus[rises] = hi + 200 < nenv ? envl[hi + 200] / envl[hi] : 1.0;
-                rises++;
-            }
-            t = hi + 1;
+        for (e = 0; e < nev; e++) {
+            int t0 = ev[e], lo = t0, hi = t0, q, p, end = t0 + 500;
+            float m, M;
+            if (end + 200 >= nenv)
+                break;
+            for (q = t0; q < t0 + 40; q++)
+                if (sm[q] < sm[lo])
+                    lo = q;
+            for (q = lo; q < end; q++)
+                if (sm[q] > sm[hi])
+                    hi = q;
+            m = sm[lo], M = sm[hi];
+            if (M < 1.41f * m || hi <= lo)
+                continue;
+            for (p = lo; p < hi && sm[p] < m + 0.1f * (M - m); p++)
+                ;
+            for (q = p; q < hi && sm[q] < m + 0.9f * (M - m); q++)
+                ;
+            att[rises] = (double)(q - p) * 0.01;
+            sus[rises] = sm[hi + 200] / M;
+            rises++;
         }
+        free(sm);
         if (rises) {
             att_min = att[0];
             for (i = 1; i < rises; i++)
