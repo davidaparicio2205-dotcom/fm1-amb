@@ -48,8 +48,8 @@ static const struct {
     {"Neon Fog",      {60, 34, 48, 36, 35, 35, 45, 43, 50, 2, 74, 82, 46, 70, 45, 65, 0, 1, 84, 0, 0, 0, 1, 0, 20, 10, 0, 40}},
     {"Vocoder Drift", {64, 30, 40, 24, 30, 45, 50, 29, 42, 3, 62, 72, 50, 60, 45, 85, 0, 1, 72, 7, 4, 0, 1, 0, 30, 10, 0, 30}},
     {"Glitch Garden", {45, 66, 44, 40, 60, 55, 30, 71, 45, 1, 48, 58, 58, 40, 75, 80, 0, 1, 112, 2, 1, 1, 0, 0, 15, 10, 30, 55}},
-    {"Fragments",     {34, 62, 48, 30, 50, 75, 25, 100, 58, 5, 55, 70, 48, 30, 85, 90, 0, 1, 100, 6, 2, 1, 1, -1, 55, 10, 0, 60}},
-    {"Static Folk",   {40, 48, 52, 40, 60, 85, 20, 86, 48, 2, 46, 58, 52, 40, 70, 95, 0, 1, 112, 4, 7, 0, 1, -1, 40, 10, 55, 66}},
+    {"Fragments",     {34, 62, 48, 30, 50, 75, 25, 100, 58, 5, 55, 70, 48, 30, 85, 90, 0, 1, 100, 6, 2, 1, 1, 0, 55, 10, 0, 60}},
+    {"Static Folk",   {40, 48, 52, 40, 60, 85, 20, 86, 48, 2, 46, 58, 52, 40, 70, 95, 0, 1, 112, 4, 7, 0, 1, 0, 40, 10, 55, 66}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -598,7 +598,7 @@ static void pad_retarget(void)                  /* the chord's tones to the four
 
 static void bass_to(int pc)
 {
-    int n = 36 + pc % 12 + 12 * par[P_BASSOCT];     /* C2..B2, an octave down or up */
+    int n = 31 + (pc + 5) % 12 + 12 * par[P_BASSOCT];   /* G1..F#2, deeper than before; an octave down or up */
     bass.target = (float)n;
     if (en_playing && bass.midi_note != n) {
         midi(0x82, bass.midi_note, 0);
@@ -639,7 +639,7 @@ static void chord_change(void)                  /* to another degree: the near, 
     pad_leave();
     bass_to(chord_pcs[0]);
     /* Evolve: the bass sometimes sits a chord out, more often when the arc is sparse */
-    bass.rest = frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
+    bass.rest = frand() < evolve * 0.1f + 0.25f * fm_maxf(-arcm, 0.0f);
     drift_reset();
 }
 
@@ -785,18 +785,18 @@ static void bell_ring(int l, int slot)
 /* ---------------------------------------------------------------- pulse --- */
 /* the grooves: fixed, never random. HITS picks one of eight (0 = none). Each is a bar of 16 sixteenths,
  * and a bit is a hit on that step. kick, closed hat, snare (the second voice, on the backbeat) and open hat;
- * bass: the steps the bass plucks on (none: the drone); up: where the pluck jumps an octave; bdec: how long
- * a pluck rings, in seconds. */
+ * bass: the steps the bass plucks on (none: the deep drone, which is what the ambient pieces want; only the
+ * club pattern, 4, plucks); up: where the pluck jumps an octave; bdec: how long a pluck rings, in seconds. */
 typedef struct { uint16_t kick, hat, snr, open, bass, up; float bdec; } groove_t;
 static const groove_t GROOVE[8] = {
     {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0.00f},   /* 0 none */
     {0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0.00f},   /* 1 heartbeat: one kick a bar */
-    {0x0101, 0x4444, 0x0000, 0x0000, 0x0101, 0x0000, 0.50f},   /* 2 half-time: kick on 1 and 3, soft offbeat hats */
-    {0x0501, 0x5555, 0x1010, 0x0000, 0x4141, 0x4040, 0.24f},   /* 3 pop '80s: kick 1, 3 and the and of 3; snare 2 and 4 */
+    {0x0101, 0x4444, 0x0000, 0x0000, 0x0000, 0x0000, 0.50f},   /* 2 half-time: kick on 1 and 3, soft offbeat hats */
+    {0x0501, 0x5555, 0x1010, 0x0000, 0x0000, 0x0000, 0.24f},   /* 3 pop '80s: kick 1, 3 and the and of 3; snare 2 and 4 */
     {0x1111, 0xAAAA, 0x0000, 0x4444, 0x4444, 0x0000, 0.20f},   /* 4 four on the floor, bass on the offbeat */
-    {0x0441, 0xFFFF, 0x1010, 0x0000, 0x4449, 0x4008, 0.18f},   /* 5 UK dance: a broken kick, busy hats */
-    {0x0481, 0xAAAA, 0x1010, 0x8000, 0x0489, 0x0000, 0.16f},   /* 6 garage two-step: shuffled with Swing */
-    {0x0909, 0x24A4, 0x0000, 0x0000, 0x0909, 0x0000, 0.15f},   /* 7 fragments: fixed, but broken */
+    {0x0441, 0xFFFF, 0x1010, 0x0000, 0x0000, 0x0000, 0.18f},   /* 5 UK dance: a broken kick, busy hats */
+    {0x0481, 0xAAAA, 0x1010, 0x8000, 0x0000, 0x0000, 0.16f},   /* 6 garage two-step: shuffled with Swing */
+    {0x0909, 0x24A4, 0x0000, 0x0000, 0x0000, 0x0000, 0.15f},   /* 7 fragments: fixed, but broken */
 };
 static uint16_t groove_snr, groove_bass, groove_up;
 static float groove_bdec = 0.999f;
@@ -830,11 +830,11 @@ static void drum_fire(int d, float vel)
     v->att = 0.0f;
     switch (d) {
     case 0: {                                   /* thump: the chord's root, low, falling into place */
-        float f = mtof((float)(36 + chord_pcs[0]));
+        float f = mtof((float)(24 + chord_pcs[0]));
         v->note = DRUM_GM[0];
         v->inc = f * 4.0f * (1.0f / EN_SR);       /* a deeper fall in pitch: more punch */
         v->inc_end = f * (1.0f / EN_SR);
-        v->adec = fm_expf(-6.9f / (0.30f * EN_SR));   /* shorter: a marked kick, not a boom */
+        v->adec = fm_expf(-6.9f / (0.38f * EN_SR));   /* deep, and long enough to hold its weight */
         break;
     }
     case 1:                                     /* closed hat: short; it chokes the open one */
@@ -1578,7 +1578,7 @@ static void render_bass(uint32_t n)
     bass.note += (bass.target - bass.note) * fm_minf((float)n * glide_k, 1.0f);   /* Glide */
     inc = mtof(bass.note) * (1.0f / EN_SR);
     for (j = 0; j < n; j++) {
-        float x = sine(ph) * 0.75f + sine(ph * 0.5f + 0.25f) * 0.45f + sine(ph * 2.0f) * 0.12f;
+        float x = sine(ph) * 0.70f + sine(ph * 0.5f + 0.25f) * 0.38f + sine(ph * 2.0f) * 0.30f + sine(ph * 3.0f) * 0.08f;
         if (plucked) {
             float b = env * env;                 /* the upper harmonics fall away faster: a filter closing */
             float p = sine(ph * oct) * 0.8f + sine(ph * oct * 0.5f + 0.25f) * 0.5f +
@@ -1728,7 +1728,7 @@ static void render_drums(uint32_t n)
     if (v->on) {
         float ph = v->ph, inc = v->inc, amp = v->amp, att = v->att;
         for (j = 0; j < n; j++) {
-            float x = sine(ph) * amp * att * g * 1.5f;   /* the kick forward in the mix */
+            float x = (sine(ph) + 0.4f * sine(ph * 2.0f)) * amp * att * g * 1.25f;   /* the second harmonic carries it on small speakers */
             mixl[j] += x;
             mixr[j] += x;
             rsend[j] += x * 0.1f;
