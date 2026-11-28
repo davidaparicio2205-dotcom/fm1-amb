@@ -1,4 +1,8 @@
-# AMB-1 licensing
+# HALF-LIGHT (and AMB-1) licensing
+
+HALF-LIGHT is a fork of AMB-1 under the same licence, file by file. Every file keeps its header and its
+credits. The files this fork changed or added carry a second copyright line for it. Everything below about AMB-1
+applies to HALF-LIGHT.
 
 AMB-1 is free software under the **Mozilla Public License 2.0** (`MPL-2.0`, full text in `LICENSE`), file by file.
 If you change one of its files and share the result, share that file's source under the MPL. It is built on
@@ -15,6 +19,7 @@ earlier stay under the GPL.
 | --- | --- | --- |
 | The platform: `base/` (boot, USB and USB audio, the TRS jack, storage, the update path, screen, panel, the screen reader, the host simulator and the browser emulator, build and install tools) | [fm1-base](https://github.com/charlesvestal/fm1-base) and [felucca-bsp](https://github.com/hugelton/felucca-bsp), from [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (@kurogedelic), Hügelton Instruments, under MPL-2.0 with his permission ([felucca-bsp#4](https://github.com/hugelton/felucca-bsp/issues/4)) | MPL-2.0 |
 | `app/` (`app.c`, `app.h`, `ui.c`, `project.c`, `host.c`, `dsp/amb.c` with its Dattorro plate from FoMni-1), `web/app/`, `tests/`, `tools/` | AMB-1, Charles Vestal | MPL-2.0 |
+| HALF-LIGHT's eras: `app/visuals.c`, `app/era_palette.h`, the eras' DSP and recipes in `app/dsp/amb.c`, changes to `ui.c`, `project.c`, `host.c`, `app.h`, `tests/host/render.c`, `tools/render_all.sh`, `tools/metrics.py`, `tools/capture_visuals.py`, `tools/emulator_check.sh`, `.github/workflows/ci.yml`, `docs/` (ERA_BIBLE, VISUAL_SYSTEM, ARCHITECTURE, visuals) | this fork, David (davidaparicio2205-dotcom), on AMB-1 | MPL-2.0 |
 | The idea of a browser emulator for FM-1 firmware (fm1-base's emulator) | [Groove OS](https://www.groove-os.com/) by Peter Gombos, whose site runs its firmware in the browser; no code from it | credit only |
 
 ## Third-party material
@@ -32,4 +37,4 @@ affiliated with, endorsed by or supported by any of them.
 
 ## Radio
 
-AMB-1 never enables the Bluetooth / Wi-Fi radio of the hardware.
+HALF-LIGHT, like AMB-1, never enables the Bluetooth / Wi-Fi radio of the hardware.

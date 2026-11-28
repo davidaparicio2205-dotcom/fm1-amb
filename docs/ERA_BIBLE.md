@@ -45,7 +45,7 @@ from reviews of the campaigns, and from colour and light only.
 
 **Engine mapping**
 - Monochrome: the Voices pad with **Chorus 55** and **Phaser 45**, the heartbeat pattern, a long reverb
-  (78/86), Echo 4 bars. Root A, Aeolian. Tempo 64.
+  (78/86), Echo 2 bars. Root A, Aeolian. Tempo 64.
 - Night Bus: the **Strings** pad with Chorus 60 and Phaser 30, the '80s pattern (snare on 2 and 4) with
   **Room 45** (the gated room), a brighter hat. Root A, Dorian. Tempo 90.
 - New DSP: the phaser and the Juno-style chorus on the pad bus, the gated room on the snare.
