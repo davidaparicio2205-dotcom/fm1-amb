@@ -1643,6 +1643,15 @@ static void render_pad(uint32_t n)
                 tgt = br * v->peak * pad_gain * v->hf;
                 /* the Rhodes blooms: more overtones as the breath swells (index in turns) */
                 idx = (0.04f + 0.1f * bright * 0.01f + 0.1f * br) * (1.0f + 0.4f * arcm);
+                if (amp < 1e-4f && tgt < 1e-4f) {   /* silent between breaths: only the phases go on, 32 samples */
+                    p0 += v->inc[0] * 32.0f;
+                    p0 -= (float)(int)p0;
+                    p1 += v->inc[1] * 32.0f;
+                    p1 -= (float)(int)p1;
+                    amp = 0.0f;
+                    j += 31u;
+                    continue;
+                }
             }
             if (!v->voices) {                    /* FM, the modulator at the carrier's pitch: a Rhodes */
                 float m = sine(p0) * idx;
@@ -1807,7 +1816,7 @@ static void render_bells(uint32_t n)
         v->amp = amp;
         v->idx = idx;
         v->att = att;
-        if (amp < 0.0008f) {
+        if (amp < 0.002f) {                      /* -54 dB: the voice is free again */
             v->on = 0;
             midi(0x81, v->note, 0);
         }
