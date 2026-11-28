@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: MPL-2.0
+# CI for pull requests and branches: the firmware package built from source (the same toolchain and SDK as the shared
+# FM-1 builder, zvenson/fm1-build, that release.yml uses for tags), every test blocking, the offline render metrics
+# and the screen captures. release.yml stays the path for attested releases (tags).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main, gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    name: Host tests and render metrics
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python packages
+        run: |
+          sudo apt-get install -y -qq libfribidi0
+          python3 -m pip install -q Pillow
+      - name: Engine, simulator and scenarios
+        run: sh tests/run_tests.sh
+      - name: Render metrics (60 s a piece)
+        run: sh tools/render_all.sh 60 app/build/render
+      - name: Stability (30 min a piece)
+        run: sh tools/render_all.sh 1800 app/build/render30 --no-wav
+      - name: Metrics in the job summary
+        run: |
+          cat app/build/render/metrics.md >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          cat app/build/render30/metrics.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-results
+          path: |
+            app/build/render/*.json
+            app/build/render/*.md
+            app/build/render30/*.json
+            app/build/render30/*.md
+            app/build/scenarios/**/*.png
+            app/build/tests/*.log
+
+  firmware:
+    name: Firmware package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python packages
+        run: |
+          sudo apt-get install -y -qq libfribidi0
+          python3 -m pip install -q Pillow
+          python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
+      - name: JieLi Linux toolchain (pkgman.jieliapp.com, as zvenson/fm1-build)
+        run: |
+          mkdir -p ~/.jieli
+          curl -fL --retry 3 https://pkgman.jieliapp.com/s/linux-toolchain | tar -xJ -C ~/.jieli
+          TC="$(ls -d ~/.jieli/jieli-linux-toolchains-* | sort | tail -1)"
+          ln -sfn "$(basename "$TC")" ~/.jieli/toolchain
+          echo "JIELI_TOOLCHAIN=$HOME/.jieli/toolchain" >> "$GITHUB_ENV"
+      - name: JieLi AC79 SDK (gitee.com, a fixed tag)
+        run: |
+          for i in 1 2 3; do
+            git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+                https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK && break
+            rm -rf ~/fw-AC79_AIoT_SDK
+            sleep 20
+          done
+          test "$(git -C ~/fw-AC79_AIoT_SDK rev-parse HEAD)" = d179b4484759423312073f5fbb232501aa491047
+          echo "AC79_SDK=$HOME/fw-AC79_AIoT_SDK" >> "$GITHUB_ENV"
+      - name: Emscripten (the browser builds' tests), as release.yml
+        run: |
+          git clone -q https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          git -C "$RUNNER_TEMP/emsdk" checkout -q a2b92777574c2feda07994cd4f1079a3dfc151f8   # emsdk 6.0.10
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.10 >/dev/null
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10 >/dev/null
+      - name: Build
+        run: |
+          ./build.sh 2>&1 | tee app/build-log.txt
+          grep -E "image|SRAM|pool" app/build-log.txt | tail -5 >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Tests, the package's update path included (blocking)
+        run: |
+          set +u; source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null; set -u
+          sh tests/run_tests.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            app/build/*.fwsc
+            app/build/*.bin
+            app/build/firmware.json
+            app/build-log.txt

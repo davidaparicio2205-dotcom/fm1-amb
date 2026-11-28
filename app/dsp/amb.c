@@ -313,6 +313,9 @@ volatile uint8_t en_pulse_rest;
 volatile uint8_t en_pad_note[EN_NPAD];
 volatile float en_pad_amp[EN_NPAD];
 
+#ifdef EN_HOST
+en_host_stats_t en_host;
+#endif
 static int16_t par[P_NPARAMS];
 static uint32_t pool = 0xAADu;                  /* Ionian until told */
 static int nsteps, steps[12];                   /* the scale */
@@ -1768,6 +1771,15 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         reverb((rsend[j] * rg + (el + er + xl + xr) * 0.35f * rev_send) * 0.8f, &wl, &wr);
         l = (mixl[j] + 0.75f * el + 0.3f * xl + 1.3f * wl) * 0.36f * gain;
         r = (mixr[j] + 0.75f * er + 0.3f * xr + 1.3f * wr) * 0.36f * gain;
+#ifdef EN_HOST
+        {
+            float al = fm_fabsf(l), ar = fm_fabsf(r);
+            en_host.pre_max = fm_maxf(en_host.pre_max, fm_maxf(al, ar));
+            en_host.sat += (al > 1.0f) + (ar > 1.0f);
+            en_host.nonfinite += !(al <= 1e30f) + !(ar <= 1e30f);
+            en_host.denorm += (al > 0.0f && al < 1.1754944e-38f) + (ar > 0.0f && ar < 1.1754944e-38f);
+        }
+#endif
         out[2 * j] = (int32_t)(fm_tanhf(l) * 8300000.0f);
         out[2 * j + 1] = (int32_t)(fm_tanhf(r) * 8300000.0f);
     }

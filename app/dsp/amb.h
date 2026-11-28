@@ -116,3 +116,12 @@ const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4"
 #define EN_NPIECES 8
 const char *en_piece_name(int i);
 void en_piece(int i, int16_t *par, uint16_t *pool);
+
+#ifdef EN_HOST
+/* the host's render harness (tests/host/render.c): what the output stage saw, before the soft limiter */
+typedef struct {
+    float pre_max;                               /* the largest |x| into the tanh */
+    uint32_t sat, nonfinite, denorm;             /* samples past 1.0 into it (deep in its knee); NaN or inf; subnormal */
+} en_host_stats_t;
+extern en_host_stats_t en_host;
+#endif
