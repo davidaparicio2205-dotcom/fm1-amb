@@ -797,6 +797,33 @@ static void draw_help(void)
         text_c(120, 56 + k * 20, &FONT_S, l[k] + (l[k][0] == ' '), K_TEXT);
 }
 
+/* Setup: the instrument's own measures, over the scene's foot: the audio load now and at its worst since the start
+ * (the longest render against its 5.8 ms), the audio blocks missed, the screen's frames a second */
+static void draw_diag(void)
+{
+    char t[64], *e = t;
+    uint32_t peak = 0;
+#ifndef PLAT_HOST
+    peak = fm1b_dbg.max_us * 100u / (APP_BLOCK * 1000000u / 44100u);
+#endif
+#define CAT(s) do { const char *c_ = (s); while (*c_) *e++ = *c_++; } while (0)
+#define NUM(v) do { itoa_u((v), e); while (*e) e++; } while (0)
+    CAT("audio ");
+    NUM(plat_cpu_pct());
+    CAT("%  peak ");
+    NUM(peak);
+    CAT("%  xruns ");
+    NUM(plat_xruns());
+    CAT("  ");
+    NUM(vis.fps);
+    CAT(" fps");
+    *e = 0;
+#undef CAT
+#undef NUM
+    cv_round(4, MAIN_H - 19, 232, 17, 4, K_PANEL);
+    text_c(120, MAIN_H - 19, &FONT_XS, t, K_TEXT);
+}
+
 static void draw_main(void)
 {
     uint32_t now = plat_ms();
@@ -820,6 +847,8 @@ static void draw_main(void)
     else {
         vis.intro = 0;
         draw_scene();
+        if (ui.view == V_SETUP)
+            draw_diag();
     }
     cv_blit(0, MAIN_Y);
 }
