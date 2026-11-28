@@ -85,15 +85,23 @@ static void px_mix(int32_t x, int32_t y, uint16_t c, int a)
     *q = swap16((uint32_t)(r << 11 | g << 5 | bl));
 }
 /* light added to the pixel (a glow, a bloom): r, g, b 0..255, saturating */
+static const uint8_t DITHER[16] = {0, 4, 1, 5, 6, 2, 7, 3, 1, 5, 0, 4, 7, 3, 6, 2};
 static void px_add(int32_t x, int32_t y, int r, int g, int b)
 {
     uint16_t *q = pxp(x, y);
     uint32_t p;
-    int R, G, B;
+    int R, G, B, d;
     if (!q)
         return;
     p = swap16(*q);
-    R = (int)(p >> 11) + ((r + 4) >> 3), G = (int)((p >> 5) & 63u) + ((g + 2) >> 2), B = (int)(p & 31u) + ((b + 4) >> 3);
+    d = DITHER[(y & 3) * 4 + (x & 3)];           /* ordered dither: smooth light in 5 and 6 bits, no rings */
+    if (r == g && g == b) {                      /* grey light stays grey: green has twice the steps of red and blue */
+        int u = (r + d) >> 3;
+        R = (int)(p >> 11) + u, G = (int)((p >> 5) & 63u) + 2 * u, B = (int)(p & 31u) + u;
+    } else {
+        R = (int)(p >> 11) + ((r + d) >> 3), G = (int)((p >> 5) & 63u) + ((g + (d >> 1)) >> 2),
+        B = (int)(p & 31u) + ((b + d) >> 3);
+    }
     *q = swap16((uint32_t)((R > 31 ? 31 : R) << 11 | (G > 63 ? 63 : G) << 5 | (B > 31 ? 31 : B)));
 }
 /* a soft round glow, added: the light falls off as (1 - d^2/r^2)^2 (no square root), k its strength 0..1 */
@@ -254,12 +262,25 @@ static float slow(float hz, float ph) { return sine(fm_fabsf((float)plat_ms() * 
  * dark, the bass breathing in the haze at the horizon. Grain over all, more of it as the arc thins out. */
 static void scene_dark(void)
 {
-    static const uint8_t W[3] = {255, 255, 255}, G[3] = {150, 150, 158};
+    static const uint8_t W[3] = {255, 255, 255}, G[3] = {150, 150, 150};
     const int32_t L0 = 58, L1 = 192, HZ = 100;
     int l, s, i;
     float kick = en_drum_glow[0], sn = en_drum_glow[2], echo = (float)proj.par[P_ECHO] * 0.01f, b = vis.breath;
-    vgrad(0, 144, RGB(6, 6, 8), RGB(22, 22, 26));
-    glow(125.0f, (float)HZ, 70.0f + 20.0f * b, G, 0.10f + 0.22f * en_bass_level * b);   /* the haze, breathing */
+    vgrad(0, 144, RGB(8, 8, 8), RGB(24, 24, 24));
+    {   /* the haze along the horizon: a band of light, wider and brighter as the bass breathes */
+        float k = 0.10f + 0.30f * en_bass_level * b, hh = 14.0f + 10.0f * b;
+        int32_t y, x;
+        for (y = HZ - (int32_t)hh; y <= HZ + (int32_t)hh; y++) {
+            float dy = (float)(y - HZ) / hh, u = 1.0f - dy * dy;
+            for (x = L0 - 10; x <= L1 + 6; x += 1) {
+                float dx = (float)(x - 125) * (1.0f / 80.0f), v = u * (1.0f - dx * dx);
+                if (v > 0.0f) {
+                    int l = (int)(150.0f * v * v * k);
+                    px_add(x, y, l, l, l);
+                }
+            }
+        }
+    }
     for (l = 0; l < EN_NLOOP; l++) {             /* the rows of lights */
         int len = EN_LOOP_LEN[l], pos = en_loop_pos[l];
         int32_t y = 40 + l * 14;
@@ -461,10 +482,13 @@ static void scene_signal(void)
                 int32_t dx = ((int32_t)((h >> (3 + k * 5)) % 13u) - 6) * (int32_t)(hit * mach * 2.0f + 0.5f), r;
                 for (r = ys; r < ys + hs && r < 144; r++) {
                     uint16_t *row = &cv_px[(uint32_t)(r + cv_oy) * cv_w];
-                    if (dx > 0)
-                        memmove(row + X0 + dx, row + X0, (size_t)(X1 - X0 - dx) * 2u);
+                    int32_t q;
+                    if (dx > 0)                  /* the slice moved right (copied from the end back) */
+                        for (q = X1 - 1; q >= X0 + dx; q--)
+                            row[q] = row[q - dx];
                     else if (dx < 0)
-                        memmove(row + X0, row + X0 - dx, (size_t)(X1 - X0 + dx) * 2u);
+                        for (q = X0; q < X1 + dx; q++)
+                            row[q] = row[q - dx];
                     if (k == 0)
                         hline_a(X0, X1, r, K_PULSE, (int)(60.0f * hit * mach));
                 }
