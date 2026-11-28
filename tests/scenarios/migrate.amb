@@ -16,7 +16,7 @@ expect par16 7
 expect par0 62
 expect par22 3
 expect par28 30
-expect par32 7
+expect par32 4
 tap SAVE
 reboot
 wait 300
