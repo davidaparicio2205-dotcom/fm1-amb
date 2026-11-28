@@ -638,6 +638,8 @@ static void vis_tick(void)                       /* once a frame: the breath, th
 {
     uint32_t now = plat_ms();
     vis.breath = 0.5f + 0.5f * slow(1.0f / 9.0f, 0.0f);
+    if (plat_cpu_pct() > vis.cpu_max)
+        vis.cpu_max = plat_cpu_pct();
     if (now - vis.fps_t >= 1000u) {
         vis.fps = vis.frames * 1000u / (now - vis.fps_t);
         vis.frames = 0;

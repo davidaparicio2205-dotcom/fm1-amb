@@ -798,14 +798,12 @@ static void draw_help(void)
 }
 
 /* Setup: the instrument's own measures, over the scene's foot: the audio load now and at its worst since the start
- * (the longest render against its 5.8 ms), the audio blocks missed, the screen's frames a second */
+ * (the highest of the platform's smoothed load, read every frame), the audio blocks missed, the screen's frames a
+ * second */
 static void draw_diag(void)
 {
     char t[64], *e = t;
-    uint32_t peak = 0;
-#ifndef PLAT_HOST
-    peak = fm1b_dbg.max_us * 100u / (APP_BLOCK * 1000000u / 44100u);
-#endif
+    uint32_t peak = vis.cpu_max;
 #define CAT(s) do { const char *c_ = (s); while (*c_) *e++ = *c_++; } while (0)
 #define NUM(v) do { itoa_u((v), e); while (*e) e++; } while (0)
     CAT("audio ");

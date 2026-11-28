@@ -46,7 +46,8 @@ static struct {
     uint32_t t0;                                 /* when the change began */
     uint32_t sig;                                /* the palette's signature (the header and knobs redraw on it) */
     uint32_t rng;
-    uint32_t frames, fps, fps_t;                 /* main-band frames drawn, and per second (Setup's header) */
+    uint32_t frames, fps, fps_t;
+    uint32_t cpu_max;                            /* the audio load's highest since the start (plat_cpu_pct) */                 /* main-band frames drawn, and per second (Setup's header) */
     float trail[EN_NLOOP][4];                    /* the bells' last strike places (era 2), for the echo's trails */
     uint8_t intro;                               /* the boot's own animation is still running */
     uint32_t intro_t;
