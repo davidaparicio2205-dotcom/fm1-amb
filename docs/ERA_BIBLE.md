@@ -167,7 +167,7 @@ only the values that set each era's character:
 | Night Bus | Strings | '80s | 60 | 30 | 0 | 45 | 90 | A Dorian | +4 |
 | Pale Piano | Rhodes | None | 0 | 0 | 0 | 0 | 66 | F Lydian | −6 |
 | Neon Fog | Voices | '80s | 0 | 0 | 0 | 0 | 84 | C Ionian | −1 |
-| Glass Choir | Formant | Half | 30 | 0 | 25 | 0 | 72 | G Mixolydian | +7 |
+| Glass Choir | Formant | Half | 30 | 0 | 25 | 0 | 72 | G Mixolydian | +4 |
 | Glitch Garden | Strings | UK | 20 | 0 | 70 | 0 | 112 | D Dorian | +6 |
 | Fragments | Voices | Broken | 0 | 0 | 55 | 0 | 100 | F# Phrygian | +6 |
 | Static Folk | Formant | 2-step | 25 | 0 | 45 | 30 | 112 | E pent. minor | +8 |
