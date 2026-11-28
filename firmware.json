@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "id": "amb",
-  "name": "AMB-1",
-  "author": "Charles Vestal",
+  "id": "halflight",
+  "name": "HALF-LIGHT",
+  "author": "David (davidaparicio2205-dotcom), after Charles Vestal's AMB-1",
   "license": "MPL-2.0",
-  "tagline": "A generative ambient machine for the FM-1",
-  "description": "AMB-1 turns the M-VAVE FM-1 into a generative ambient machine, inspired by Brian Eno's Music for Airports. It plays itself from the moment it's switched on: breathing voices, soft bells on tape loops of unequal length, a gliding bass and quiet Euclidean percussion, through a tape echo and a plate reverb. It has eight pieces, and it is an album as much as an instrument. You don't perform it, you tend it: pick a piece and a scale, take notes out, put them back, and let it grow.",
+  "tagline": "Four eras of night music for the FM-1",
+  "description": "HALF-LIGHT is a generative ambient machine for the M-VAVE FM-1 in four eras, two pieces each: after dark (monochrome, intimate, a phased and chorused pad), the long glow (big pads, soft piano, neon haze), clean signal (a formant choir that turns mechanical, glitching bells) and cut and paste (fragments, two-step pulses, cold electronics). It plays itself from the moment it is switched on, and every era has its own moving screen that follows the sound. Built on Charles Vestal's AMB-1.",
   "tags": ["ambient", "generative", "fm"],
-  "install": "https://charlesvestal.github.io/fm1-amb/install/",
-  "site": "https://charlesvestal.github.io/fm1-amb/",
-  "source": "https://github.com/charlesvestal/fm1-amb",
-  "screenshot": "docs/img/screen-garden.png",
+  "install": "https://github.com/davidaparicio2205-dotcom/fm1-amb/releases",
+  "site": "https://github.com/davidaparicio2205-dotcom/fm1-amb",
+  "source": "https://github.com/davidaparicio2205-dotcom/fm1-amb",
+  "screenshot": "docs/visuals/era1-after-dark.png",
   "hardware": {
     "models": ["FM-1"],
     "flash": ["856014", "B36014"],
     "features": ["usb-audio-in", "screen-reader"]
   },
-  "credits": "Built on fm1-base and felucca-bsp, from Felucca by Leo Kuroshita (Hügelton Instruments)."
+  "credits": "A fork of AMB-1 by Charles Vestal. Built on fm1-base and felucca-bsp, from Felucca by Leo Kuroshita (Hügelton Instruments)."
 }
