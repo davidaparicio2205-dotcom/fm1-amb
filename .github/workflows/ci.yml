@@ -97,10 +97,6 @@ jobs:
         run: |
           ./build.sh 2>&1 | tee app/build-log.txt
           grep -E "image|SRAM|pool" app/build-log.txt | tail -5 >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Tests, the package's update path included (blocking)
-        run: |
-          set +u; source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null; set -u
-          sh tests/run_tests.sh
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
@@ -109,3 +105,7 @@ jobs:
             app/build/*.bin
             app/build/firmware.json
             app/build-log.txt
+      - name: Tests, the package's update path included (blocking)
+        run: |
+          set +u; source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null; set -u
+          sh tests/run_tests.sh
